@@ -78,13 +78,9 @@ def calc_numerator_single_t (t):
 def calc_numerator ():
     source_pointing = hp.pixelfunc.ang2vec(source_theta*np.ones(times.shape[0]), source_phi_array)
     u_rot = np.transpose(rot_matricies@(u.T), [0,2,1])
-    print("Got here")
-    print((-u_rot).shape)
     
     cdir1 = np.pi*L/wavelength*np.dot(source_pointing[:,np.newaxis,:]-u_rot,dir1_proj_vec)
     cdir2 = np.pi*L/wavelength*np.dot(source_pointing[:,np.newaxis,:]-u_rot,dir2_proj_vec)
-    
-    print("got here")
     
     u_s_eq_u_p = np.linalg.norm(source_pointing - chord_pointing) == 0
     if u_s_eq_u_p:
@@ -93,7 +89,7 @@ def calc_numerator ():
         Bsq_source_value = B_sq(np.arccos(np.dot(source_pointing, chord_pointing)))
     
     u_eq_u_p = np.linalg.norm(u_rot - chord_pointing, axis = 2) <= 1E-12
-    Bsq_values = np.where(u_eq_u_p, 1, B_sq(np.arccos(np.tensordot(u_rot, chord_pointing, axes = 2))))
+    Bsq_values = np.where(u_eq_u_p, 1, B_sq(np.arccos(np.sum(u_rot * chord_pointing, axes = 2))))
     return Bsq_source_value * np.sum(np.sin(cdir1*m)**2/np.sin(cdir1)**2 * np.sin(cdir2*m)**2/np.sin(cdir2)**2 * Bsq_values, axis = 0)
 
 #declaring/calculating some stuff for the below function
