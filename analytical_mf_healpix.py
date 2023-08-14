@@ -1,6 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import imageio.v3 as iio
 import os
 import sys
 import healpy as hp
@@ -134,84 +133,23 @@ if __name__ == "__main__":
     square_pixel_plot (denom, "Denominator")
     plt.plot(np.rad2deg(chord_phi), np.rad2deg(chord_theta), 'rx', ms=15, label="Chord pointing")
     plt.legend()
-
-    if len(sys.argv) > 1 and sys.argv[1] == "--movie":
-        #times = np.linspace(0.0,24*3600, 200) [:-1]
-        times = np.linspace(0.0, 360, 200) [:-1]
-
-        print("Calculating numerator and matched filters for all times:")
-        #vmin_num, vmax_num, vmin_mf, vmax_mf = None, None, None, None
-        num = np.empty([times.shape[0],npix_height, npix_width])
-        for i in range(times.shape[0]):
-            t = times[i]
-            num[i] = calc_numerator(t)
-            print("\x1b[2K",str((i+1)/times.shape[0] * 100)+"% complete", end='\r')
-        
-        vmin_mf = np.min(num/denom)
-        vmax_mf = np.max(num/denom)
-        
-        print("\nPlotting...")
-        for i in range(times.shape[0]):
-            t = times[i]
-            
-            #fig2 = plt.figure()
-            #plt.imshow(num, origin = "upper", extent = (phi_lower, phi_upper, theta_upper, theta_lower), interpolation = "none")
-            #plt.title("Numerator")
-            #plt.xlabel(r"$\Phi$")
-            #plt.ylabel(r"$\theta$")
-            #plt.plot(chord_phi, chord_theta, 'rx', ms=15, label="Chord pointing")
-            #if (source_phi(t) >= phi_lower and source_phi(t) <= phi_upper): plt.plot(source_phi(t), source_theta, 'bx', ms=15, label="Source location")
-            #plt.colorbar()
-            #plt.legend()
-            #plt.savefig("num"+str(i)+".png")
-            #plt.close()
-
-            fig3 = plt.figure()
-            plt.imshow(num[i]/denom, origin = "upper", extent = (phi_lower, phi_upper, theta_upper, theta_lower), vmin = vmin_mf, vmax = vmax_mf, interpolation = "none")
-            plt.title("Matched filter")
-            plt.xlabel(r"$\Phi$")
-            plt.ylabel(r"$\theta$")
-            plt.plot(chord_phi, chord_theta, color="red", marker="x", ms=15, label="Chord pointing")
-            if (source_phi(t) >= phi_lower and source_phi(t) <= phi_upper):  plt.plot(source_phi(t), source_theta, color="blue", marker="x", ms=15, label="Source location")
-            #plt.colorbar()
-            plt.legend()
-            plt.savefig("mf"+str(i)+".png")
-            plt.close()
-            
-            print("\x1b[2K",str((i+1)/times.shape[0] * 100)+"% complete", end='\r')
-
-        print("\nSaving gifs...")
-        #with iio.imopen('numerator.gif', "w") as gif:
-        #    for i in range(times.shape[0]):
-        #        filename = "num"+str(i)+".png"
-        #        image = iio.imread(filename)
-        #        gif.write(image, loop=0)
-        #        os.remove(filename)
-        with iio.imopen('matched filter.gif', "w") as gif:
-            for i in range(times.shape[0]):
-                filename = "mf"+str(i)+".png"
-                image = iio.imread(filename)
-                gif.write(image, loop=0)
-                os.remove(filename)
-                print("\x1b[2K",str((i+1)/times.shape[0] * 100)+"% complete", end='\r')
-        print("\n")
+    
+    #hmap = np.full(npix, hp.UNSEEN)
+    if len(sys.argv) > 1 and sys.argv[1] == "--noSumt":
+        num = calc_numerator_single_t(0)
     else:
-        #hmap = np.full(npix, hp.UNSEEN)
-        if len(sys.argv) > 1 and sys.argv[1] == "--noSumt":
-            num = calc_numerator_single_t(0)
-        else:
-            num = calc_numerator()
-        #hmap[pix] = num/denom
+        num = calc_numerator()
+    #hmap[pix] = num/denom
         
-        #hp.gnomview(hmap, rot=rot, xsize = 300, ysize=50, reso=plot_reso, title="Matched filter")
-        #hp.graticule()
-        #hp.visufunc.projscatter(chord_theta, chord_phi, lonlat=False, color="red", marker="x", label="Chord pointing")
-        square_pixel_plot (num/denom, "Matched filter")
-        plt.plot(np.rad2deg(chord_phi), np.rad2deg(chord_theta), 'rx', ms=15, label="Chord pointing")
-        if (source_phi(0) >= phi_lower and source_phi(0) <= phi_upper):  plt.plot(np.rad2deg(source_phi(0)), np.rad2deg(source_theta), 'bx', ms=15, label="Source location")
-        plt.legend()
-        
-        if len(sys.argv) > 1 and sys.argv[1] == "--show":
-            plt.show()
-        else:
-            plt.savefig("matched_filter.png")
+    #hp.gnomview(hmap, rot=rot, xsize = 300, ysize=50, reso=plot_reso, title="Matched filter")
+    #hp.graticule()
+    #hp.visufunc.projscatter(chord_theta, chord_phi, lonlat=False, color="red", marker="x", label="Chord pointing")
+    square_pixel_plot (num/denom, "Matched filter")
+    plt.plot(np.rad2deg(chord_phi), np.rad2deg(chord_theta), 'rx', ms=15, label="Chord pointing")
+    if (source_phi(0) >= phi_lower and source_phi(0) <= phi_upper):  plt.plot(np.rad2deg(source_phi(0)), np.rad2deg(source_theta), 'bx', ms=15, label="Source location")
+    plt.legend()
+     
+    if len(sys.argv) > 1 and sys.argv[1] == "--show":
+        plt.show()
+    else:
+        plt.savefig("matched_filter.png")
