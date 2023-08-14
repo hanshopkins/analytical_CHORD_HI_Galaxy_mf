@@ -211,4 +211,7 @@ if __name__ == "__main__":
         if (source_phi(0) >= phi_lower and source_phi(0) <= phi_upper):  plt.plot(np.rad2deg(source_phi(0)), np.rad2deg(source_theta), 'bx', ms=15, label="Source location")
         plt.legend()
         
-        plt.show()
+        if len(sys.argv) > 1 and sys.argv[1] == "--show":
+            plt.show()
+        else:
+            plt.savefig("matched_filter.png")
