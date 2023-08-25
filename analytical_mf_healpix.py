@@ -11,7 +11,7 @@ chord_phi = 0
 D = 6 #meters
 L = 7 #meters
 speedoflight = 3E8
-wavelength = speedoflight/1000E6
+wavelength = speedoflight/1500E6
 
 source_theta = np.deg2rad(41)
 omega = 2*np.pi/86400 #earth angular velocity in seconds
@@ -50,12 +50,14 @@ u = np.asarray(hp.pixelfunc.pix2vec(nside, pix)).T
 time_samples = 2000
 times = np.linspace(0, 3600.0*24, time_samples+1)[:-1]
 source_phi_array = source_phi(times)
-rot_matricies = rotation_matrix(times)
 
-def calc_denominator ():
+def calc_denominator_single_t ():
     u_eq_u_p = np.linalg.norm(u - chord_pointing, axis = 1) <= 1E-12
     Bsq_values = np.where(u_eq_u_p, 1, B_sq(np.arccos(np.tensordot(u, chord_pointing, axes = 1))))
     return Bsq_values
+
+def calc_denominator ():
+    return np.sum(Bsq_values, axis = 0)
 
 def calc_numerator_single_t (t):    
     source_pointing = hp.pixelfunc.ang2vec(source_theta, source_phi(t))
@@ -76,8 +78,6 @@ def calc_numerator_single_t (t):
     return Bsq_source_value * np.sin(cdir1*m)**2/np.sin(cdir1)**2 * np.sin(cdir2*m)**2/np.sin(cdir2)**2 * Bsq_values
     
 def calc_numerator ():
-    source_pointing = hp.pixelfunc.ang2vec(source_theta*np.ones(times.shape[0]), source_phi_array)
-    u_rot = np.transpose(rot_matricies@(u.T), [0,2,1])
     
     cdir1 = np.pi*L/wavelength*np.dot(source_pointing[:,np.newaxis,:]-u_rot,dir1_proj_vec)
     cdir2 = np.pi*L/wavelength*np.dot(source_pointing[:,np.newaxis,:]-u_rot,dir2_proj_vec)
@@ -88,9 +88,7 @@ def calc_numerator ():
     else:
         Bsq_source_value = B_sq(np.arccos(np.dot(source_pointing, chord_pointing)))
     
-    u_eq_u_p = np.linalg.norm(u_rot - chord_pointing, axis = 2) <= 1E-12
-    Bsq_values = np.where(u_eq_u_p, 1, B_sq(np.arccos(np.sum(u_rot * chord_pointing, axes = 2))))
-    return Bsq_source_value * np.sum(np.sin(cdir1*m)**2/np.sin(cdir1)**2 * np.sin(cdir2*m)**2/np.sin(cdir2)**2 * Bsq_values, axis = 0)
+    return np.sum(Bsq_source_value[:,np.newaxis]*np.sin(cdir1*m)**2/np.sin(cdir1)**2 * np.sin(cdir2*m)**2/np.sin(cdir2)**2 * Bsq_values, axis = 0)
 
 #declaring/calculating some stuff for the below function
 npix_width, npix_height = 300, 300
@@ -112,8 +110,18 @@ def square_pixel_plot (values_array, title):
     
 
 if __name__ == "__main__":
+    source_pointing = hp.pixelfunc.ang2vec(source_theta*np.ones(times.shape[0]), source_phi_array)
+    print("Rotating test vectors for all times...")
+    rot_matricies = rotation_matrix(times)
+    u_rot = np.transpose(rot_matricies@(u.T), [0,2,1])
+
+    print("Calculating B squared values...")
+    u_eq_u_p = np.linalg.norm(u_rot - chord_pointing, axis = 2) <= 1E-12
+    Bsq_values = np.where(u_eq_u_p, 1, B_sq(np.arccos(np.dot(chord_pointing, u_rot.transpose([0,2,1])))))
+
     #hmap = np.full(npix, hp.UNSEEN)
     
+    print("Calculating the denominator...")
     denom = calc_denominator()
     #hmap[pix] = denom
 
@@ -134,6 +142,7 @@ if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "--noSumt":
         num = calc_numerator_single_t(0)
     else:
+        print("Calculating numerator...")
         num = calc_numerator()
     #hmap[pix] = num/denom
         
