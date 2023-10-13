@@ -1,8 +1,9 @@
-//g++ -fPIC -o amf.so -shared analytical_mf.cpp
+//g++ -fPIC -o amf.so -shared analytical_mf.cpp -fopenmp
 
 #include <iostream>
 #include <math.h>       /* sin, cos */
 #include <cmath>        /* sph_bessel, acos */
+#include <omp.h>
 
 #define D 6.0 //meters
 #define L 7.0 //meters
@@ -69,6 +70,7 @@ extern "C" {void analytic_matched_filter (const double chord_theta, const double
     ang2vec(chord_theta + PI/2, 0, dir1_proj_vec);
     cross(dir1_proj_vec, chord_pointing, dir2_proj_vec);
     
+    #pragma omp parallel for
     for (unsigned int i = 0; i < num_u; i++)
     {
         double numerator_sum = 0;
