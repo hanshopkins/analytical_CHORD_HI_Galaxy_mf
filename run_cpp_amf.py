@@ -6,26 +6,27 @@ import healpy as hp
 from scipy.interpolate import LinearNDInterpolator
 from cpp_amf_wrapper import amf
 
-chord_theta = np.deg2rad(40.8)
+chord_theta = 1.56
 chord_phi = 0
 D = 6 #meters
 L = 7 #meters
 speedoflight = 3E8
 wavelength = speedoflight/1000E6
-source_theta = np.deg2rad(41)
-source_phi_0 = 0.0087
+source_theta = 1.56
+source_phi_0 = 0
 
-time_samples = 2000
+time_samples = 100
 delta_tau = 24.0*3600/time_samples
 
-phi_lower, phi_upper, theta_lower, theta_upper, m = np.deg2rad(-0.3), np.deg2rad(1), np.deg2rad(41.4), np.deg2rad(38), 22 #m is the number of dishes per row and column, so 8 or 22
+phi_lower, phi_upper, theta_lower, theta_upper, m = np.deg2rad(-7), np.deg2rad(7), 1.45, 1.65, 22 #m is the number of dishes per row and column, so 8 or 22
 
 ####################setting healpix coords
 #first calculating the needed resolution
 sky_fraction_to_plot = ((phi_upper-phi_lower)*(theta_lower-theta_upper))/(2*np.pi**2) #sky fraction to plot
 wanted_npix_in_plot = 200*300
 wanted_total_pix = wanted_npix_in_plot/sky_fraction_to_plot
-nside = hp.pixelfunc.get_min_valid_nside(wanted_total_pix)
+#nside = hp.pixelfunc.get_min_valid_nside(wanted_total_pix)
+nside = 1024
 npix = hp.nside2npix(nside)
 #polygon of relevant pixels
 poly_vertices = np.empty([4,3])

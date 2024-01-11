@@ -11,7 +11,7 @@ chord_phi = 0
 D = 6 #meters
 L = 7 #meters
 speedoflight = 3E8
-wavelength = speedoflight/1500E6
+wavelength = speedoflight/1000E6
 
 source_theta = np.deg2rad(41)
 omega = 2*np.pi/86400 #earth angular velocity in seconds
@@ -19,7 +19,7 @@ def source_phi (t): return (omega*t + np.pi + 0.0087)%(2*np.pi) - np.pi;
 
 def rotation_matrix (t) : return np.array([[np.cos(omega*t), -np.sin(omega*t), np.zeros(t.shape[0])],[np.sin(omega*t), np.cos(omega*t), np.zeros(t.shape[0])],[np.zeros(t.shape[0]), np.zeros(t.shape[0]), np.ones(t.shape[0])]]).transpose(2,0,1)
 
-phi_lower, phi_upper, theta_lower, theta_upper, m = np.deg2rad(-5), np.deg2rad(5), np.deg2rad(41.5), np.deg2rad(40.5), 22 #m is the number of dishes per row and column, so 8 or 22
+phi_lower, phi_upper, theta_lower, theta_upper, m = np.deg2rad(-0.3), np.deg2rad(1), np.deg2rad(41.4), np.deg2rad(38), 22 #m is the number of dishes per row and column, so 8 or 22
 
 chord_pointing = hp.pixelfunc.ang2vec(chord_theta, chord_phi)
 dir1_proj_vec = hp.pixelfunc.ang2vec(chord_theta + np.pi/2, chord_phi) #north/south chord direction
@@ -47,7 +47,7 @@ poly_vertices[3] = hp.pixelfunc.ang2vec(theta_lower, phi_lower)
 pix = hp.query_polygon(nside, poly_vertices, fact=8, inclusive=True)
 u = np.asarray(hp.pixelfunc.pix2vec(nside, pix)).T
 
-time_samples = 2000
+time_samples = 1
 times = np.linspace(0, 3600.0*24, time_samples+1)[:-1]
 source_phi_array = source_phi(times)
 
@@ -149,10 +149,10 @@ if __name__ == "__main__":
     #hp.gnomview(hmap, rot=rot, xsize = 300, ysize=50, reso=plot_reso, title="Matched filter")
     #hp.graticule()
     #hp.visufunc.projscatter(chord_theta, chord_phi, lonlat=False, color="red", marker="x", label="Chord pointing")
-    square_pixel_plot (num/denom, "Matched filter")
+    square_pixel_plot (num/denom, "") #square_pixel_plot (num/denom, "Matched filter")
     plt.plot(np.rad2deg(chord_phi), np.rad2deg(chord_theta), 'rx', ms=15, label="Chord pointing")
-    if (source_phi(0) >= phi_lower and source_phi(0) <= phi_upper):  plt.plot(np.rad2deg(source_phi(0)), np.rad2deg(source_theta), 'bx', ms=15, label="Source location")
-    plt.legend()
+    #if (source_phi(0) >= phi_lower and source_phi(0) <= phi_upper):  plt.plot(np.rad2deg(source_phi(0)), np.rad2deg(source_theta), 'bx', ms=15, label="Source location")
+    #plt.legend()
      
     if len(sys.argv) > 1 and sys.argv[1] == "--show":
         plt.show()
