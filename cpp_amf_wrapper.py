@@ -43,6 +43,14 @@ def amf_su (chord_theta, wavelength, source_theta, source_phi_0, m1, m2, u, delt
     return cpp_amf_su(dither_thetas, wavelength, source_theta, source_phi_0, m1, m2, u, delta_tau, time_samples, dither_thetas.shape[0])
     
 def synthesized_beam (chord_theta, wavelength, source_theta, source_phi_0, m1, m2, u, delta_tau, time_samples):
+    #chord_theta : CHORD's angle away from the North Pole in radians. If this is a numpy array, this adds dithering. It can just be a float if you don't want dithering.
+    #wavelength : the wavelength
+    #source_theta, source_phi_0 : the source's true location when time starts (in radians, and theta is away from the North Pole, phi is away from CHORD)
+    #m1, m2 : Number of dishes. m1 is north-south and m2 is east-west.
+    #u : A vector of unit vectors for every pixel that you want. You can get this with healpy functions.
+    # delta_tau : time difference between each time step in seconds.
+    # time_samples : number of time samples
+    
     sb = np.empty(u.shape[0])
     num_u = u.shape[0]
     u = np.ascontiguousarray(u.flatten()) ##sometimes this can be out of order
