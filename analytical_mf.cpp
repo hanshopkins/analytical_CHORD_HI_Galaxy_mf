@@ -7,8 +7,9 @@
 #include<limits>
 #include <stdio.h>
 
-#define D 6.0 //meters
-#define L 7.0 //meters
+#define D 5.8 //meters
+#define L1 8.5 //north-south dish separation (meters)
+#define L2 6.3 //east-west dish separation (meters)
 #define PI 3.14159265358979323846
 #define omega 2*PI/86400 //earth angular velocity in rads/second
 
@@ -93,15 +94,19 @@ double sin_sq_ratio (const unsigned short m, const double x_prime)
     else return sin(m*x)*sin(m*x)/(sin(x)*sin(x));
 }
 
-extern "C" {void analytic_matched_filter (const double chord_theta, const double wavelength, const double source_theta, const double source_phi_0, const unsigned short m, 
-                                    const double * u, const unsigned int num_u, const double delta_tau, const unsigned int time_samples, double * mf)
+extern "C" {void analytic_matched_filter (const double * chord_theta, const double wavelength, const double source_theta, const double source_phi_0, const unsigned short m1, const unsigned short m2, 
+                                    const double * u, const unsigned int num_u, const double delta_tau, const unsigned int time_samples, const unsigned int ndithers, double * mf)
 {
-    double chord_pointing [3];
-    double dir1_proj_vec [3]; //north/south chord direction
-    double dir2_proj_vec [3]; //east/west chord direction
-    ang2vec(chord_theta, 0, chord_pointing);
-    ang2vec(chord_theta + PI/2, 0, dir1_proj_vec);
-    cross(dir1_proj_vec, chord_pointing, dir2_proj_vec);
+    //calculating the relevant CHORD vectors for each dither direction
+    double chord_pointing [3*ndithers];
+    double dir1_proj_vec [3*ndithers]; //north/south chord direction
+    double dir2_proj_vec [3*ndithers]; //east/west chord direction
+    for (unsigned int k = 0; k < ndithers; k++)
+    {
+        ang2vec(chord_theta[k], 0, chord_pointing+3*k);
+        ang2vec(chord_theta[k] + PI/2, 0, dir1_proj_vec+3*k);
+        cross(dir1_proj_vec+3*k, chord_pointing+3*k, dir2_proj_vec+3*k);
+    }
     
     //calculating the normalization factor
     double normalization_sum=0;
@@ -110,11 +115,13 @@ extern "C" {void analytic_matched_filter (const double chord_theta, const double
         double tau = j*delta_tau;
         double source_pointing [3];
         ang2vec(source_theta, source_phi(source_phi_0, tau), source_pointing);
-        double Bsq_source = Bsq_from_vecs(source_pointing, chord_pointing, wavelength);
-        ///////////
-        normalization_sum += Bsq_source*Bsq_source;
+        for (unsigned int k = 0; k<ndithers; k++) //summing dithers first then tau directions which are assumed to be the same for all dithers
+        {
+            double Bsq_source = Bsq_from_vecs(source_pointing, chord_pointing+3*k, wavelength);
+            normalization_sum += Bsq_source*Bsq_source;
+        }
     }
-    double normalization = sqrt(normalization_sum)*m*m*m*m;
+    double normalization = sqrt(normalization_sum)*m1*m1*m2*m2;
     //calculating rest of matched filter
     #pragma omp parallel for
     for (unsigned int i = 0; i < num_u; i++)
@@ -122,34 +129,36 @@ extern "C" {void analytic_matched_filter (const double chord_theta, const double
         double numerator_sum = 0;
         double denominator_sum = 0;
         const double * u_i = u + 3*i;
-        for (unsigned int j = 0; j < time_samples; j++)
+        for (unsigned int k = 0; k < ndithers; k++)
         {
-            double tau = j*delta_tau;
-            double source_pointing [3];
-            ang2vec(source_theta, source_phi(source_phi_0, tau), source_pointing);
-            
-            double u_rot [3];
-            rotate(u_i, u_rot, tau*omega);
-            
-            double Bsq_u = Bsq_from_vecs(u_rot, chord_pointing, wavelength);
-            //if (i == 0 && j == 0) std::cout << Bsq_u << std::endl;
-            
-            //computing numerator
-            double cdir1 = PI*L/wavelength*subtractdot(source_pointing, u_rot, dir1_proj_vec);
-            double cdir2 = PI*L/wavelength*subtractdot(source_pointing, u_rot, dir2_proj_vec);
-            
-            double Bsq_source = Bsq_from_vecs(source_pointing, chord_pointing, wavelength);
-            ///////////
-            numerator_sum += Bsq_source * Bsq_u * sin_sq_ratio(m,cdir1) * sin_sq_ratio(m,cdir2);
-            denominator_sum += Bsq_u*Bsq_u;
+            for (unsigned int j = 0; j < time_samples; j++)
+            {
+                double tau = j*delta_tau;
+                double source_pointing [3];
+                ang2vec(source_theta, source_phi(source_phi_0, tau), source_pointing);
+                
+                double u_rot [3];
+                rotate(u_i, u_rot, tau*omega);
+                
+                double Bsq_u = Bsq_from_vecs(u_rot, chord_pointing+3*k, wavelength);
+                //if (i == 0 && j == 0) std::cout << Bsq_u << std::endl;
+                
+                //computing numerator
+                double cdir1 = PI*L1/wavelength*subtractdot(source_pointing, u_rot, dir1_proj_vec+3*k);
+                double cdir2 = PI*L2/wavelength*subtractdot(source_pointing, u_rot, dir2_proj_vec+3*k);
+                
+                double Bsq_source = Bsq_from_vecs(source_pointing, chord_pointing+3*k, wavelength);
+                ///////////
+                numerator_sum += Bsq_source * Bsq_u * sin_sq_ratio(m1,cdir1) * sin_sq_ratio(m2,cdir2);
+                denominator_sum += Bsq_u*Bsq_u;
+            }
+            //if (i%3000 == 0) std::cout << "i: " << i << " num sum: " << numerator_sum << " Denom sum:" << denominator_sum << std::endl;
+            mf[i] = numerator_sum/sqrt(denominator_sum)/normalization;
         }
-        //if (i%3000 == 0) std::cout << "i: " << i << " num sum: " << numerator_sum << " Denom sum:" << denominator_sum << std::endl;
-        mf[i] = numerator_sum/sqrt(denominator_sum)/normalization;
     }
 }}
 
-extern "C" {double analytic_matched_filter_single_u (const double * chord_theta, const double wavelength, const double source_theta, const double source_phi_0, const unsigned short m, 
-                                    const double * u, const double delta_tau, const unsigned int time_samples, const unsigned int ndithers)
+extern "C" {double analytic_matched_filter_single_u (const double * chord_theta, const double wavelength, const double source_theta, const double source_phi_0, const unsigned short m1, const unsigned short m2, const double * u, const double delta_tau, const unsigned int time_samples, const unsigned int ndithers)
 {
     double numerator_sum = 0;
     double denominator_sum = 0;
@@ -176,18 +185,64 @@ extern "C" {double analytic_matched_filter_single_u (const double * chord_theta,
             double Bsq_u = Bsq_from_vecs(u_rot, chord_pointing, wavelength);
             
             //computing numerator
-            double cdir1 = PI*L/wavelength*subtractdot(source_pointing, u_rot, dir1_proj_vec);
-            double cdir2 = PI*L/wavelength*subtractdot(source_pointing, u_rot, dir2_proj_vec);
+            double cdir1 = PI*L1/wavelength*subtractdot(source_pointing, u_rot, dir1_proj_vec);
+            double cdir2 = PI*L2/wavelength*subtractdot(source_pointing, u_rot, dir2_proj_vec);
             
             double Bsq_source = Bsq_from_vecs(source_pointing, chord_pointing, wavelength);
             ///////////
             //printf("numerator: %f, Denom: %f, normalization: %f\n", Bsq_source * Bsq_u * sin_sq_ratio(m,cdir1) * sin_sq_ratio(m,cdir2), Bsq_u*Bsq_u,Bsq_source*Bsq_source);
-            numerator_sum += Bsq_source * Bsq_u * sin_sq_ratio(m,cdir1) * sin_sq_ratio(m,cdir2);
+            numerator_sum += Bsq_source * Bsq_u * sin_sq_ratio(m1,cdir1) * sin_sq_ratio(m2,cdir2);
             denominator_sum += Bsq_u*Bsq_u;
             normalization_sum += Bsq_source*Bsq_source;
         }
     }
-    double normalization = sqrt(normalization_sum)*m*m*m*m;
+    double normalization = sqrt(normalization_sum)*m1*m1*m2*m2;
     //std::cout << "num: " << numerator_sum << " denom: " << sqrt(denominator_sum) << " Normalization: " << normalization << std::endl;
     return numerator_sum/sqrt(denominator_sum)/normalization;
+}}
+
+extern "C" {void synthesized_beam (const double * chord_theta, const double wavelength, const double source_theta, const double source_phi_0, const unsigned short m1, const unsigned short m2, 
+                                    const double * u, const unsigned int num_u, const double delta_tau, const unsigned int time_samples, const unsigned int ndithers, double * sb)
+{
+    //calculating the relevant CHORD vectors for each dither direction
+    double chord_pointing [3*ndithers];
+    double dir1_proj_vec [3*ndithers]; //north/south chord direction
+    double dir2_proj_vec [3*ndithers]; //east/west chord direction
+    for (unsigned int k = 0; k < ndithers; k++)
+    {
+        ang2vec(chord_theta[k], 0, chord_pointing+3*k);
+        ang2vec(chord_theta[k] + PI/2, 0, dir1_proj_vec+3*k);
+        cross(dir1_proj_vec+3*k, chord_pointing+3*k, dir2_proj_vec+3*k);
+    }
+    //calculating rest of matched filter
+    #pragma omp parallel for
+    for (unsigned int i = 0; i < num_u; i++)
+    {
+        double numerator_sum = 0;
+        double denominator_sum = 0;
+        const double * u_i = u + 3*i;
+        for (unsigned int k = 0; k < ndithers; k++)
+        {
+            for (unsigned int j = 0; j < time_samples; j++)
+            {
+                double tau = j*delta_tau;
+                double source_pointing [3];
+                ang2vec(source_theta, source_phi(source_phi_0, tau), source_pointing);
+                
+                double u_rot [3];
+                rotate(u_i, u_rot, tau*omega);
+                
+                double Bsq_u = Bsq_from_vecs(u_rot, chord_pointing+3*k, wavelength);
+                
+                //computing numerator
+                double cdir1 = PI*L1/wavelength*subtractdot(source_pointing, u_rot, dir1_proj_vec+3*k);
+                double cdir2 = PI*L2/wavelength*subtractdot(source_pointing, u_rot, dir2_proj_vec+3*k);
+                
+                double Bsq_source = Bsq_from_vecs(source_pointing, chord_pointing+3*k, wavelength);
+                ///////////
+                numerator_sum += Bsq_source * Bsq_u * sin_sq_ratio(m1,cdir1) * sin_sq_ratio(m2,cdir2);
+            }
+            sb[i] = numerator_sum;
+        }
+    }
 }}

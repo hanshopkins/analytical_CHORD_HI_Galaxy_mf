@@ -57,6 +57,6 @@ def square_pixel_plot (values_array, title):
     plt.ylabel(r"$\theta$")
     
 if __name__ == "__main__":
-    mfo = amf(chord_theta, wavelength, source_theta, source_phi_0, m, test_vecs, delta_tau, time_samples)
+    mfo = amf(chord_theta, wavelength, source_theta, source_phi_0, m, m, test_vecs, delta_tau, time_samples)
     square_pixel_plot (mfo, "Matched filter")
     plt.show()
