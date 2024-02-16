@@ -68,9 +68,6 @@ double B_sq (const double alpha, const double wavelength)
 inline double Bsq_from_vecs (const double v1 [3], const double v2 [3], const double wavelength)
 {
     double dp = dot(v1,v2);
-    //need some clamping logic for the acos
-    //if (dp >= 1) return 1;
-    //if (dp <= -1) return (2*std::cyl_bessel_j(1,PI*PI*D/wavelength)/(PI*PI*D/wavelength)) * (2*std::cyl_bessel_j(1,PI*PI*D/wavelength)/(PI*PI*D/wavelength));
     //we want to deal with the arccos instiblity by using the cross product formula instead
     double delta_ang;
     if (dp < 0.99 && dp > -0.99) delta_ang = std::acos(dp);    
@@ -79,7 +76,6 @@ inline double Bsq_from_vecs (const double v1 [3], const double v2 [3], const dou
         delta_ang = std::asin(crossmag(v1,v2));
         delta_ang = (dp > 0) ? delta_ang : PI-delta_ang;
     }
-    //printf("dp: %f, crossmag %f, Delta ang: %f, B_sq %f\n", dp, crossmag(v1,v2), delta_ang, B_sq(delta_ang, wavelength));
     return B_sq(delta_ang, wavelength);
 }
 

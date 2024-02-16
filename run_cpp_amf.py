@@ -6,19 +6,18 @@ import healpy as hp
 from scipy.interpolate import LinearNDInterpolator
 from cpp_amf_wrapper import amf
 
-chord_theta = 1.56
+chord_theta = np.deg2rad(45)
 chord_phi = 0
 D = 6 #meters
-L = 7 #meters
 speedoflight = 3E8
 wavelength = speedoflight/1000E6
-source_theta = 1.56
+source_theta = np.deg2rad(44.5)
 source_phi_0 = 0
 
-time_samples = 100
+time_samples = 1000
 delta_tau = 24.0*3600/time_samples
 
-phi_lower, phi_upper, theta_lower, theta_upper, m = np.deg2rad(-7), np.deg2rad(7), 1.45, 1.65, 22 #m is the number of dishes per row and column, so 8 or 22
+phi_lower, phi_upper, theta_lower, theta_upper, m1, m2 = np.deg2rad(-7), np.deg2rad(7), np.deg2rad(40), np.deg2rad(50), 24, 22 #m is the number of dishes per row and column, so 8 or 22
 
 ####################setting healpix coords
 #first calculating the needed resolution
@@ -57,6 +56,6 @@ def square_pixel_plot (values_array, title):
     plt.ylabel(r"$\theta$")
     
 if __name__ == "__main__":
-    mfo = amf(chord_theta, wavelength, source_theta, source_phi_0, m, m, test_vecs, delta_tau, time_samples)
+    mfo = amf(chord_theta, wavelength, source_theta, source_phi_0, m1, m2, test_vecs, delta_tau, time_samples)
     square_pixel_plot (mfo, "Matched filter")
     plt.show()

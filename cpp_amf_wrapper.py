@@ -13,7 +13,7 @@ cpp_amf_su.argtypes = [ndpointer(ctypes.c_double, flags="C_CONTIGUOUS"), ctypes.
                         ctypes.c_double, ctypes.c_uint, ctypes.c_uint]
 cpp_amf_su.restype = ctypes.c_double
 
-cpp_sb = amfLib.analytic_matched_filter
+cpp_sb = amfLib.synthesized_beam
 cpp_sb.argtypes = [ndpointer(ctypes.c_double), ctypes.c_double, ctypes.c_double, ctypes.c_double, ctypes.c_ushort, ctypes.c_ushort, ndpointer(ctypes.c_double, flags="C_CONTIGUOUS"), ctypes.c_uint,
                         ctypes.c_double, ctypes.c_uint, ctypes.c_uint, ndpointer(ctypes.c_double, flags="C_CONTIGUOUS")]
 
