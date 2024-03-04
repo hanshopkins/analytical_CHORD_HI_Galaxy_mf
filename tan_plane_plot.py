@@ -97,7 +97,7 @@ def tan_plane_plot (base_theta, base_phi, chord_theta, nx, ny, extent1, extent2,
         # sec(alpha)(ch_of_basis_mat @ (cos phi sin theta, sin phi sin theta, cos(theta)), where alpha is the 
         #angular distance cos^-1(sin phi_base sin phi + cos phi_base cos phi cos(theta_base - theta))
         chob = np.linalg.inv(np.hstack((v1[np.newaxis].T, v2[np.newaxis].T, basevec[np.newaxis].T)))#change of basis matrix
-        for phi_deg in phi_ticks: # range(ceil(np.rad2deg(base_phi-e1grid)), floor(np.rad2deg(base_phi+e1grid)) + 1):
+        for phi_deg in phi_ticks:
             phi = np.deg2rad(phi_deg)
             secalpha = 1/(np.sin(base_phi)*np.sin(phi) + np.cos(base_phi)*np.cos(phi)*np.cos(base_theta-thetatp))
             tempvec = np.vstack((np.cos(phi)*np.sin(thetatp), np.sin(phi)*np.sin(thetatp), np.cos(thetatp)))
@@ -107,7 +107,7 @@ def tan_plane_plot (base_theta, base_phi, chord_theta, nx, ny, extent1, extent2,
             line_in_tangent_plane_coords[0] = line_in_tangent_plane_coords_unscaled[0]/np.tan(extent2) #the top of this array should be the ys and the bottom are the xs
             line_in_tangent_plane_coords[1] = line_in_tangent_plane_coords_unscaled[1]/np.tan(extent1)
             plt.plot(line_in_tangent_plane_coords[1], line_in_tangent_plane_coords[0],color="grey",linestyle=(0, (3, 10)))
-        for theta_deg in theta_ticks: #range(ceil(np.rad2deg(base_theta-e2grid)), floor(np.rad2deg(base_theta+e2grid)) + 1):
+        for theta_deg in theta_ticks:
             theta = np.deg2rad(theta_deg)
             secalpha = 1/(np.sin(base_phi)*np.sin(phitp) + np.cos(base_phi)*np.cos(phitp)*np.cos(base_theta-theta))
             tempvec = np.vstack((np.cos(phitp)*np.sin(theta), np.sin(phitp)*np.sin(theta), np.cos(theta)*np.ones(phitp.shape[0])))
