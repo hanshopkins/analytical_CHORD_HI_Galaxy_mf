@@ -58,7 +58,7 @@ inline double source_phi (const double source_phi_0, const double t)
 
 double B_sq (const double alpha, const double wavelength)
 {
-    double alphaprime = PI*D*alpha/wavelength;
+    double alphaprime = PI*D*sin(alpha)/wavelength;
     if (alphaprime <= 1E-8 && alphaprime >= -1E-8)
         return (std::cyl_bessel_j(0,alphaprime)-std::cyl_bessel_j(2,alphaprime))*(std::cyl_bessel_j(0,alphaprime)-std::cyl_bessel_j(2,alphaprime)); //l'Hopital's
     else
