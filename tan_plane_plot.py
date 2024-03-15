@@ -72,9 +72,12 @@ def tan_plane_plot (base_theta, base_phi, chord_theta, nx, ny, extent1, extent2,
         def ang_2_tpp_coords (theta, phi): #let's define a function that can convert between spherical coordinates and tangent plane projection coodinates
             #the formula is
             # sec(alpha)(ch_of_basis_mat @ (cos phi sin theta, sin phi sin theta, cos(theta)), where alpha is the angular distance
-            tempvec = np.asarray([np.cos(phi)*np.sin(theta), np.sin(phi)*np.sin(theta), np.cos(theta)*np.ones(np.atleast_1d(phi).shape[0])])
+            if isinstance(phi,np.ndarray): #we need some logic here depending on whether the inputs are arrays or not
+                tempvec = np.asarray([np.cos(phi)*np.sin(theta), np.sin(phi)*np.sin(theta), np.cos(theta)*np.ones(phi.shape[0])])
+            else:
+                tempvec = np.asarray([np.cos(phi)*np.sin(theta), np.sin(phi)*np.sin(theta), np.cos(theta)])
             secalpha = 1/(np.dot(tempvec.T,basevec))
-            tpp_coords_unscaled = secalpha*(chob @ tempvec)[:2]
+            tpp_coords_unscaled = secalpha*(chob[:2] @ tempvec)
             return tpp_coords_unscaled[1]/np.tan(extent1), tpp_coords_unscaled[0]/np.tan(extent2) #x,y
         
         if plot_chord:
@@ -114,39 +117,25 @@ def tan_plane_plot (base_theta, base_phi, chord_theta, nx, ny, extent1, extent2,
             theta_ticks = get_integer_ticks(np.rad2deg(thetatp[0]), np.rad2deg(thetatp[-1]), theta_separation)
             
             def plot_const_RA_gridline (phi, color="grey",label=None):
-                tempvec = np.vstack((np.cos(phi)*np.sin(thetatp), np.sin(phi)*np.sin(thetatp), np.cos(thetatp)*np.ones(phitp.shape[0])))
-                secalpha = 1/(np.dot(tempvec.T,basevec))
-                line_in_tangent_plane_coords_unscaled = secalpha*(chob @ tempvec)[:2]
-                #assert(np.all(np.abs(np.dot((line_in_tangent_plane_coords_unscaled - np.array([[0],[0],[1]])).T, np.array([0,0,1]))) < 1e-10))
-                #line_in_tangent_plane_coords_unscaled[:2]
-                #the imshow goes from -1 to 1, so we need to scale these
-                line_in_tangent_plane_coords = np.empty([2,thetatp.shape[0]])
-                line_in_tangent_plane_coords[0] = line_in_tangent_plane_coords_unscaled[0]/np.tan(extent2) #the top of this array should be the ys and the bottom are the xs
-                line_in_tangent_plane_coords[1] = line_in_tangent_plane_coords_unscaled[1]/np.tan(extent1)
-                plt.plot(line_in_tangent_plane_coords[1], line_in_tangent_plane_coords[0], color=color,linestyle=(0, (3, 10)),label=label)
+                x,y = ang_2_tpp_coords(thetatp,phi)
+                plt.plot(x, y, color=color,linestyle=(0, (3, 10)),label=label)
                 #we want to find if it crosses the boundary, and if so, write a tick marker
-                cross = np.searchsorted(line_in_tangent_plane_coords[0][::-1], -1)
-                if cross < line_in_tangent_plane_coords.shape[1] and line_in_tangent_plane_coords[1][::-1][cross] > -1 and line_in_tangent_plane_coords[1][::-1][cross] < 1:
-                    plt.text(line_in_tangent_plane_coords[1][::-1][cross]-0.02,-1.07, "{degvalue:n}".format(degvalue=np.rad2deg(phi)))
+                cross = np.searchsorted(y[::-1], -1)
+                if cross < x.shape[0] and x[::-1][cross] > -1 and x[::-1][cross] < 1:
+                    plt.text(x[::-1][cross]-0.02,-1.07, "{degvalue:n}".format(degvalue=np.rad2deg(phi)))
             
             for phi_deg in phi_ticks:
                 phi = np.deg2rad(phi_deg)
                 plot_const_RA_gridline (phi)
             for theta_deg in theta_ticks: #plot lines of constant dec
                 theta = np.deg2rad(theta_deg)
-                tempvec = np.vstack((np.cos(phitp)*np.sin(theta), np.sin(phitp)*np.sin(theta), np.cos(theta)*np.ones(phitp.shape[0])))
-                secalpha = 1/(np.dot(tempvec.T,basevec))
-                line_in_tangent_plane_coords_unscaled = secalpha * (chob @ tempvec)[:2]
-                #the imshow goes from -1 to 1, so we need to scale these
-                line_in_tangent_plane_coords = np.empty([2,phitp.shape[0]])
-                line_in_tangent_plane_coords[0] = line_in_tangent_plane_coords_unscaled[0]/np.tan(extent2) #the top of this array should be the ys and the bottom are the xs
-                line_in_tangent_plane_coords[1] = line_in_tangent_plane_coords_unscaled[1]/np.tan(extent1)
-                plt.plot(line_in_tangent_plane_coords[1], line_in_tangent_plane_coords[0], color="grey",linestyle=(0, (3, 10)))
+                x,y = ang_2_tpp_coords(theta,phitp)
+                plt.plot(x, y, color="grey",linestyle=(0, (3, 10)))
                 
                 #we want to find if it crosses the boundary, and if so, write a tick marker
-                cross = np.searchsorted(line_in_tangent_plane_coords[1], -1)
-                if cross < line_in_tangent_plane_coords.shape[1] and line_in_tangent_plane_coords[0][cross] < 1 and line_in_tangent_plane_coords[0][cross] > -1:
-                    plt.text(-1.14, line_in_tangent_plane_coords[0][cross], "{degvalue:n}".format(degvalue=theta_deg))
+                cross = np.searchsorted(x, -1)
+                if cross < y.shape[0] and y[cross] < 1 and y[cross] > -1:
+                    plt.text(-1.14, y[cross], "{degvalue:n}".format(degvalue=theta_deg))
             #plt.text(-0.8,-1.1,"Gridline separations: "+str(phi_separation)+" deg (RA), "+str(theta_separation)+" deg (dec)")
         
     plt.show()
