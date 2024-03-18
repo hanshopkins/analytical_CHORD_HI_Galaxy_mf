@@ -38,7 +38,8 @@ def peak_at_pos_for_testing(u, source_theta, source_phi):
     alpha = np.arcsin(np.sqrt(np.sum(np.cross(u_source,u)**2,axis=-1)))
     return np.exp(-(alpha/0.003490658503988659)**2)
 
-def tan_plane_plot (base_theta, base_phi, chord_theta, nx, ny, extent1, extent2, wavelength, source_theta, source_phi_0, m1, m2, delta_tau, time_samples, title, gridlines=False, plot_chord=False, plot_source=False):
+def tan_plane_plot (base_theta, base_phi, chord_theta, nx, ny, extent1, extent2, wavelength, source_theta, source_phi_0, m1, m2, delta_tau, time_samples, title, gridlines=False, plot_chord=False, plot_source=False, axis_labels=True):
+    #design idea for plot chord is it's "point" or True for a single point and "line" for a gridline at CHORD
     testvecs = np.empty([nx,ny,3])
     basevec = ang_2_3vec(base_phi,base_theta)
     v1 = ang_2_3vec(base_phi,base_theta - np.pi/2)
@@ -80,13 +81,13 @@ def tan_plane_plot (base_theta, base_phi, chord_theta, nx, ny, extent1, extent2,
             tpp_coords_unscaled = secalpha*(chob[:2] @ tempvec)
             return tpp_coords_unscaled[1]/np.tan(extent1), tpp_coords_unscaled[0]/np.tan(extent2) #x,y
         
-        if plot_chord:
+        if plot_chord and plot_chord!="line":
             x,y = ang_2_tpp_coords (chord_theta, 0)
             plt.plot(x, y, 'rx', ms=15, label="CHORD location")
         if plot_source:
             x,y = ang_2_tpp_coords (source_theta, source_phi_0)
             plt.plot(x, y, 'bx', ms=15, label="Source location")
-        if gridlines:
+        if gridlines or plot_chord=="line":
             #handling the grid lines
             #hacky way to get
             corner_sph_coords = np.asarray([vec2ang(testvecs[0][0]), vec2ang(testvecs[0][-1]), vec2ang(testvecs[-1][0]), vec2ang(testvecs[-1][-1])])
@@ -108,37 +109,40 @@ def tan_plane_plot (base_theta, base_phi, chord_theta, nx, ny, extent1, extent2,
                 e2grid = (high_theta-low_theta)/2
                 thetatp = np.linspace(base_theta-e2grid, base_theta+e2grid,100) #thetastoplot
 
-            #next figuring out the line spacing. We don't want to plot too many gridlines.
-            deg_thresholds = np.array([5,10,25,50,150],dtype=int)
-            deg_separations = np.array([1,2,5,10,30,60],dtype=int)
-            phi_separation = deg_separations[np.searchsorted(deg_thresholds,np.rad2deg(e1grid))]
-            theta_separation = deg_separations[np.searchsorted(deg_thresholds,np.rad2deg(e2grid))]
-            phi_ticks = get_integer_ticks(np.rad2deg(phitp[0]), np.rad2deg(phitp[-1]), phi_separation)
-            theta_ticks = get_integer_ticks(np.rad2deg(thetatp[0]), np.rad2deg(thetatp[-1]), theta_separation)
-            
-            def plot_const_RA_gridline (phi, color="grey",label=None):
-                x,y = ang_2_tpp_coords(thetatp,phi)
-                plt.plot(x, y, color=color,linestyle=(0, (3, 10)),label=label)
-                #we want to find if it crosses the boundary, and if so, write a tick marker
-                cross = np.searchsorted(y[::-1], -1)
-                if cross < x.shape[0] and x[::-1][cross] > -1 and x[::-1][cross] < 1:
-                    plt.text(x[::-1][cross]-0.02,-1.07, "{degvalue:n}".format(degvalue=np.rad2deg(phi)))
-            
-            for phi_deg in phi_ticks:
-                phi = np.deg2rad(phi_deg)
-                plot_const_RA_gridline (phi)
-            for theta_deg in theta_ticks: #plot lines of constant dec
-                theta = np.deg2rad(theta_deg)
-                x,y = ang_2_tpp_coords(theta,phitp)
-                plt.plot(x, y, color="grey",linestyle=(0, (3, 10)))
+            if gridlines:
+                #next figuring out the line spacing. We don't want to plot too many gridlines.
+                deg_thresholds = np.array([5,10,25,50,150],dtype=int)
+                deg_separations = np.array([1,2,5,10,30,60],dtype=int)
+                phi_separation = deg_separations[np.searchsorted(deg_thresholds,np.rad2deg(e1grid))]
+                theta_separation = deg_separations[np.searchsorted(deg_thresholds,np.rad2deg(e2grid))]
+                phi_ticks = get_integer_ticks(np.rad2deg(phitp[0]), np.rad2deg(phitp[-1]), phi_separation)
+                theta_ticks = get_integer_ticks(np.rad2deg(thetatp[0]), np.rad2deg(thetatp[-1]), theta_separation)
                 
-                #we want to find if it crosses the boundary, and if so, write a tick marker
-                cross = np.searchsorted(x, -1)
-                if cross < y.shape[0] and y[cross] < 1 and y[cross] > -1:
-                    plt.text(-1.14, y[cross], "{degvalue:n}".format(degvalue=theta_deg))
-            #plt.text(-0.8,-1.1,"Gridline separations: "+str(phi_separation)+" deg (RA), "+str(theta_separation)+" deg (dec)")
-        
-    plt.show()
+                def plot_const_RA_gridline (phi, color="grey",label=None):
+                    x,y = ang_2_tpp_coords(thetatp,phi)
+                    plt.plot(x, y, color=color,linestyle=(0, (3, 10)),label=label)
+                    if axis_labels:
+                        #we want to find if it crosses the boundary, and if so, write a tick marker
+                        cross = np.searchsorted(y[::-1], -1)
+                        if cross < x.shape[0] and x[::-1][cross] > -1 and x[::-1][cross] < 1:
+                            plt.text(x[::-1][cross]-0.02,-1.07, "{degvalue:n}".format(degvalue=np.rad2deg(phi)))
+                
+                for phi_deg in phi_ticks:
+                    phi = np.deg2rad(phi_deg)
+                    plot_const_RA_gridline (phi)
+                for theta_deg in theta_ticks: #plot lines of constant dec
+                    theta = np.deg2rad(theta_deg)
+                    x,y = ang_2_tpp_coords(theta,phitp)
+                    plt.plot(x, y, color="grey",linestyle=(0, (3, 10)))
+                    if axis_labels:
+                        #we want to find if it crosses the boundary, and if so, write a tick marker
+                        cross = np.searchsorted(x, -1)
+                        if cross < y.shape[0] and y[cross] < 1 and y[cross] > -1:
+                            plt.text(-1.14, y[cross], "{degvalue:n}".format(degvalue=theta_deg))
+                #plt.text(-0.8,-1.1,"Gridline separations: "+str(phi_separation)+" deg (RA), "+str(theta_separation)+" deg (dec)")
+            if plot_chord=="line":
+                x,y = ang_2_tpp_coords(chord_theta,phitp)
+                plt.plot(x, y, color="red",linestyle=(0, (3, 10)), label="CHORD")    
                 
 
 if __name__ == "__main__":
