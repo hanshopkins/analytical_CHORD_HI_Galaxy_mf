@@ -86,7 +86,7 @@ def tan_plane_plot (base_theta, base_phi, chord_theta, nx, ny, extent1, extent2,
             plt.plot(x, y, 'rx', ms=15, label="CHORD location")
         if plot_source:
             x,y = ang_2_tpp_coords (source_theta, source_phi_0)
-            plt.plot(x, y, 'bx', ms=15, label="Source location")
+            plt.plot(x, y, 'bs', mfc='none', ms=15, label="Source location")
         if gridlines or plot_chord=="line":
             #handling the grid lines
             #hacky way to get
@@ -120,7 +120,8 @@ def tan_plane_plot (base_theta, base_phi, chord_theta, nx, ny, extent1, extent2,
                 
                 def plot_const_RA_gridline (phi, color="grey",label=None):
                     x,y = ang_2_tpp_coords(thetatp,phi)
-                    plt.plot(x, y, color=color,linestyle=(0, (3, 10)),label=label)
+                    plt.plot(x, y, color=color, #linestyle=(0, (3, 10)),
+                        alpha=0.3, label=label)
                     if axis_labels:
                         #we want to find if it crosses the boundary, and if so, write a tick marker
                         cross = np.searchsorted(y[::-1], -1)
@@ -133,7 +134,7 @@ def tan_plane_plot (base_theta, base_phi, chord_theta, nx, ny, extent1, extent2,
                 for theta_deg in theta_ticks: #plot lines of constant dec
                     theta = np.deg2rad(theta_deg)
                     x,y = ang_2_tpp_coords(theta,phitp)
-                    plt.plot(x, y, color="grey",linestyle=(0, (3, 10)))
+                    plt.plot(x, y, color="grey", alpha=0.3)#linestyle=(0, (3, 10)))
                     if axis_labels:
                         #we want to find if it crosses the boundary, and if so, write a tick marker
                         cross = np.searchsorted(x, -1)
