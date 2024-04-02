@@ -7,7 +7,7 @@
 #include<limits>
 #include <stdio.h>
 
-#define D 5.8 //meters
+#define D 6.0 //meters
 #define L1 8.5 //north-south dish separation (meters)
 #define L2 6.3 //east-west dish separation (meters)
 #define PI 3.14159265358979323846
@@ -68,15 +68,19 @@ double B_sq (const double alpha, const double wavelength)
 inline double Bsq_from_vecs (const double v1 [3], const double v2 [3], const double wavelength)
 {
     double dp = dot(v1,v2);
-    //we want to deal with the arccos instiblity by using the cross product formula instead
-    double delta_ang;
-    if (dp < 0.99 && dp > -0.99) delta_ang = std::acos(dp);    
-    else 
+    if (dp <= 0) return 0; //horizon condition
+    else
     {
-        delta_ang = std::asin(crossmag(v1,v2));
-        delta_ang = (dp > 0) ? delta_ang : PI-delta_ang;
+        //we want to deal with the arccos instiblity by using the cross product formula instead
+        double delta_ang;
+        if (dp < 0.99) delta_ang = std::acos(dp);    
+        else 
+        {
+            delta_ang = std::asin(crossmag(v1,v2));
+            //delta_ang = (dp > 0) ? delta_ang : PI-delta_ang; //I don't need this line with the horizon condition
+        }
+        return B_sq(delta_ang, wavelength);
     }
-    return B_sq(delta_ang, wavelength);
 }
 
 double sin_sq_ratio (const unsigned short m, const double x_prime)
@@ -90,8 +94,7 @@ double sin_sq_ratio (const unsigned short m, const double x_prime)
     else return sin(m*x)*sin(m*x)/(sin(x)*sin(x));
 }
 
-extern "C" {void analytic_matched_filter (const double * chord_theta, const double wavelength, const double source_theta, const double source_phi_0, const unsigned short m1, const unsigned short m2, 
-                                    const double * u, const unsigned int num_u, const double delta_tau, const unsigned int time_samples, const unsigned int ndithers, double * mf)
+extern "C" {void analytic_matched_filter (const double * chord_theta, const double chord_phi, const double wavelength, const double source_theta, const double source_phi_0, const unsigned short m1, const unsigned short m2, const double * u, const unsigned int num_u, const double delta_tau, const unsigned int time_samples, const unsigned int ndithers, double * mf)
 {
     //calculating the relevant CHORD vectors for each dither direction
     double chord_pointing [3*ndithers];
@@ -99,8 +102,8 @@ extern "C" {void analytic_matched_filter (const double * chord_theta, const doub
     double dir2_proj_vec [3*ndithers]; //east/west chord direction
     for (unsigned int k = 0; k < ndithers; k++)
     {
-        ang2vec(chord_theta[k], 0, chord_pointing+3*k);
-        ang2vec(chord_theta[k] + PI/2, 0, dir1_proj_vec+3*k);
+        ang2vec(chord_theta[k], chord_phi, chord_pointing+3*k);
+        ang2vec(chord_theta[k] + PI/2, chord_phi, dir1_proj_vec+3*k);
         cross(dir1_proj_vec+3*k, chord_pointing+3*k, dir2_proj_vec+3*k);
     }
     
@@ -186,7 +189,7 @@ extern "C" {double analytic_matched_filter_single_u (const double * chord_theta,
             
             double Bsq_source = Bsq_from_vecs(source_pointing, chord_pointing, wavelength);
             ///////////
-            //printf("numerator: %f, Denom: %f, normalization: %f\n", Bsq_source * Bsq_u * sin_sq_ratio(m,cdir1) * sin_sq_ratio(m,cdir2), Bsq_u*Bsq_u,Bsq_source*Bsq_source);
+            //printf("sample %i: numerator: %f, Denom: %f, normalization: %f\n", j, Bsq_source * Bsq_u * sin_sq_ratio(m1,cdir1) * sin_sq_ratio(m2,cdir2), Bsq_u*Bsq_u,Bsq_source*Bsq_source);
             numerator_sum += Bsq_source * Bsq_u * sin_sq_ratio(m1,cdir1) * sin_sq_ratio(m2,cdir2);
             denominator_sum += Bsq_u*Bsq_u;
             normalization_sum += Bsq_source*Bsq_source;
