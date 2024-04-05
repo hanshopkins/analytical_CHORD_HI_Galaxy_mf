@@ -64,7 +64,7 @@ def tan_plane_plot (base_theta, base_phi, chord_theta, nx, ny, extent1, extent2,
     plt.title(title)
     #plt.colorbar()
     ax = plt.gca()
-    ax.set_axis_off()
+    #ax.set_axis_off()
     ax.set_xlim([-1, 1])
     ax.set_ylim([-1, 1])
     
@@ -82,8 +82,11 @@ def tan_plane_plot (base_theta, base_phi, chord_theta, nx, ny, extent1, extent2,
             return tpp_coords_unscaled[1]/np.tan(extent1), tpp_coords_unscaled[0]/np.tan(extent2) #x,y
         
         if plot_chord and plot_chord!="line":
-            x,y = ang_2_tpp_coords (chord_theta, 0)
-            plt.plot(x, y, 'rx', ms=15, label="CHORD location")
+            if plot_chord is np.ndarray:
+                print("error: it looks like you're trying to plot dithers as points. Plot them as lines instead.")
+            else:
+                x,y = ang_2_tpp_coords (chord_theta, 0)
+                plt.plot(x, y, 'rx', ms=15, label="CHORD location")
         if plot_source:
             x,y = ang_2_tpp_coords (source_theta, source_phi_0)
             plt.plot(x, y, 'bs', mfc='none', ms=15, label="Source location")
@@ -118,6 +121,13 @@ def tan_plane_plot (base_theta, base_phi, chord_theta, nx, ny, extent1, extent2,
                 phi_ticks = get_integer_ticks(np.rad2deg(phitp[0]), np.rad2deg(phitp[-1]), phi_separation)
                 theta_ticks = get_integer_ticks(np.rad2deg(thetatp[0]), np.rad2deg(thetatp[-1]), theta_separation)
                 
+                #holding values for pyplot ticks which we'll add later
+                x_axis_tick_positions = []
+                x_axis_tick_labels = []
+                y_axis_tick_positions = []
+                y_axis_tick_labels = []
+                
+                #convenient function
                 def plot_const_RA_gridline (phi, color="grey",label=None):
                     x,y = ang_2_tpp_coords(thetatp,phi)
                     plt.plot(x, y, color=color, #linestyle=(0, (3, 10)),
@@ -126,7 +136,9 @@ def tan_plane_plot (base_theta, base_phi, chord_theta, nx, ny, extent1, extent2,
                         #we want to find if it crosses the boundary, and if so, write a tick marker
                         cross = np.searchsorted(y[::-1], -1)
                         if cross < x.shape[0] and x[::-1][cross] > -1 and x[::-1][cross] < 1:
-                            plt.text(x[::-1][cross]-0.02,-1.07, "{degvalue:n}".format(degvalue=np.rad2deg(phi)))
+                            x_axis_tick_positions.append(x[::-1][cross])
+                            x_axis_tick_labels.append("{degvalue:n}".format(degvalue=np.rad2deg(phi)))
+                            #plt.text(x[::-1][cross]-0.02,-1.07, "{degvalue:n}".format(degvalue=np.rad2deg(phi)))
                 
                 for phi_deg in phi_ticks:
                     phi = np.deg2rad(phi_deg)
@@ -139,13 +151,24 @@ def tan_plane_plot (base_theta, base_phi, chord_theta, nx, ny, extent1, extent2,
                         #we want to find if it crosses the boundary, and if so, write a tick marker
                         cross = np.searchsorted(x, -1)
                         if cross < y.shape[0] and y[cross] < 1 and y[cross] > -1:
-                            plt.text(-1.14, y[cross], "{degvalue:n}".format(degvalue=theta_deg))
-                #plt.text(-0.8,-1.1,"Gridline separations: "+str(phi_separation)+" deg (RA), "+str(theta_separation)+" deg (dec)")
+                            y_axis_tick_positions.append(y[cross])
+                            y_axis_tick_labels.append("{degvalue:n}".format(degvalue=90-theta_deg)) #converting to dec
+                            #plt.text(-1.14, y[cross], "{degvalue:n}".format(degvalue=theta_deg))
+                #plt.text(-0.8,-1.1,"Gridline separations: "+str(phi_separation)+" deg (RA), "+str(theta_separation)+" deg (dec)"))
+                #plt.xticks(x_axis_tick_positions, x_axis_tick_labels)
+                ax.set_xticks(x_axis_tick_positions, x_axis_tick_labels)
+                ax.set_yticks(y_axis_tick_positions, y_axis_tick_labels)
+                plt.draw()
             if plot_chord=="line":
-                x,y = ang_2_tpp_coords(chord_theta,phitp)
-                plt.plot(x, y, color="red",linestyle=(0, (3, 10)), label="CHORD")    
+                if isinstance(chord_theta, np.ndarray):
+                    for i in range(chord_theta.shape[0]):
+                        x,y = ang_2_tpp_coords(chord_theta[i],phitp)
+                        plt.plot(x, y, color="red",linestyle=(0, (3, 10)), label="CHORD")
+                else:
+                    x,y = ang_2_tpp_coords(chord_theta,phitp)
+                    plt.plot(x, y, color="red",linestyle=(0, (3, 10)), label="CHORD")
                 
-
+    
 if __name__ == "__main__":
-    tan_plane_plot (np.deg2rad(1), 0, np.deg2rad(0), 300,300, np.deg2rad(3), np.deg2rad(3), 0.21, np.deg2rad(0), 0, 24, 22, 24.0*3600/1000, 1, "test tan plane plot", gridlines=True)
+    tan_plane_plot (np.deg2rad(90-49.322), np.deg2rad(0), np.array([np.deg2rad(90-49.322+1), np.deg2rad(90-49.322), np.deg2rad(90-49.322-1)]), 600,600, np.deg2rad(3), np.deg2rad(3), 0.21, np.deg2rad(90-49.322), np.deg2rad(0), 24, 22, 24.0*3600/600, 600, "", plot_chord="line", gridlines=True)
     plt.show()
