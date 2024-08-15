@@ -1,8 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from cpp_amf_wrapper import amf
+from cpp_amf_wrapper import synthesized_beam
 from numpy.linalg import inv
 from math import floor, ceil
+from sidelobe_brightness import approxAliasNorthu, approxAliasSouthu, AliasEast
 
 def get_integer_ticks (low, high, separation):
     return np.arange(np.ceil(low/separation)*separation, (np.floor(high/separation)+1)*separation, separation)
@@ -38,7 +40,7 @@ def peak_at_pos_for_testing(u, source_theta, source_phi):
     alpha = np.arcsin(np.sqrt(np.sum(np.cross(u_source,u)**2,axis=-1)))
     return np.exp(-(alpha/0.003490658503988659)**2)
 
-def tan_plane_plot (base_theta, base_phi, chord_theta, nx, ny, extent1, extent2, wavelength, source_theta, source_phi_0, m1, m2, delta_tau, time_samples, title, gridlines=False, plot_chord=False, plot_source=False, axis_labels=True):
+def tan_plane_plot (base_theta, base_phi, chord_theta, nx, ny, extent1, extent2, wavelength, source_theta, source_phi_0, m1, m2, delta_tau, time_samples, title, gridlines=False, plot_chord=False, plot_source=False, axis_labels=True, mode="matched filter", chord_phi=0,vmax=None, log=False, colorbar=False, highlight_aliases = False):
     #design idea for plot chord is it's "point" or True for a single point and "line" for a gridline at CHORD
     testvecs = np.empty([nx,ny,3])
     basevec = ang_2_3vec(base_phi,base_theta)
@@ -57,16 +59,32 @@ def tan_plane_plot (base_theta, base_phi, chord_theta, nx, ny, extent1, extent2,
     np.divide(testvecs[:,:,1],norms, testvecs[:,:,1])
     np.divide(testvecs[:,:,2],norms, testvecs[:,:,2])
     
-    values = amf (chord_theta, wavelength, source_theta, source_phi_0, m1, m2, testvecs.reshape([nx*ny,3]), delta_tau, time_samples).reshape([ny,nx])
+    if mode == "matched filter":
+        values = amf (chord_theta, wavelength, source_theta, source_phi_0, m1, m2, testvecs.reshape([nx*ny,3]), delta_tau, time_samples, chord_phi=chord_phi).reshape([ny,nx])
+    elif mode == "synthesized beam":
+        values = synthesized_beam (chord_theta, wavelength, source_theta, source_phi_0, m1, m2, testvecs.reshape([nx*ny,3]), delta_tau, time_samples, chord_phi=chord_phi).reshape([ny,nx])
+    else:
+        print("Invalid mode. Options are 'matched filter' or 'synthesized beam'")
+        assert(1==0)
+    
+    if log:
+        values = np.log10(values)
     
     fig = plt.figure()
-    plt.imshow(values, origin="lower", interpolation = "none", extent = (-1,1,-1,1))
+    if log:
+        plt.imshow(values, origin="lower", interpolation = "none", extent = (-1,1,-1,1), cmap="Greys", vmax=vmax), #vmin=vmax-18)
+        gridlinecolor="mediumorchid"
+    else:
+        plt.imshow(values, origin="lower", interpolation = "none", extent = (-1,1,-1,1), cmap="Greys", vmax=vmax)
+        gridlinecolor="grey"
     plt.title(title)
-    #plt.colorbar()
     ax = plt.gca()
-    #ax.set_axis_off()
+    if not gridlines: plt.tick_params(top=False, bottom=False, left=False, right=False, labelleft=False, labelbottom=False)
     ax.set_xlim([-1, 1])
     ax.set_ylim([-1, 1])
+    ax.set_aspect(ny/nx)
+    if colorbar:
+        plt.colorbar()
     
     if gridlines or plot_chord or plot_source:
         chob = np.linalg.inv(np.hstack((v1[np.newaxis].T, v2[np.newaxis].T, basevec[np.newaxis].T)))#change of basis matrix. The negative is to fix the orientations being opposite.
@@ -85,11 +103,35 @@ def tan_plane_plot (base_theta, base_phi, chord_theta, nx, ny, extent1, extent2,
             if plot_chord is np.ndarray:
                 print("error: it looks like you're trying to plot dithers as points. Plot them as lines instead.")
             else:
-                x,y = ang_2_tpp_coords (chord_theta, 0)
+                x,y = ang_2_tpp_coords (chord_theta, chord_phi)
                 plt.plot(x, y, 'rx', ms=15, label="CHORD location")
         if plot_source:
             x,y = ang_2_tpp_coords (source_theta, source_phi_0)
             plt.plot(x, y, 'bs', mfc='none', ms=15, label="Source location")
+        if highlight_aliases:
+            if time_samples == 1:
+                #currently not implemented for chord_phi neq 0
+                x,y = ang_2_tpp_coords (*vec2ang(approxAliasNorthu(np.atleast_1d(chord_theta)[0], ang_2_3vec(source_phi_0, source_theta), wavelength, phi=chord_phi)))
+                plt.plot(x, y, 'gs', mfc='none', ms=10, label="North alias location")
+                x,y = ang_2_tpp_coords (*vec2ang(approxAliasSouthu(np.atleast_1d(chord_theta)[0], ang_2_3vec(source_phi_0, source_theta), wavelength, phi=chord_phi)))
+                plt.plot(x, y, 'gs', mfc='none', ms=10, label="South alias location")
+                eastaliasAngularCoords = vec2ang(approxAliasEastu(np.atleast_1d(chord_theta)[0], ang_2_3vec(source_phi_0, source_theta), wavelength, phi=chord_phi))
+                x,y = ang_2_tpp_coords (*eastaliasAngularCoords)
+                plt.plot(x, y, 'gs', mfc='none', ms=10, label="East alias location")
+                x,y = ang_2_tpp_coords (eastaliasAngularCoords[0], source_phi_0 - (eastaliasAngularCoords[1] - source_phi_0))
+                plt.plot(x, y, 'gs', mfc='none', ms=10, label="West alias location")
+            else:
+                x,y = ang_2_tpp_coords (*vec2ang(approxAliasNorthu(np.atleast_1d(chord_theta)[0], ang_2_3vec(source_phi_0, source_theta), wavelength)))
+                plt.plot(x, y, 'gs', mfc='none', ms=10, label="North alias location")
+                x,y = ang_2_tpp_coords (*vec2ang(approxAliasSouthu(np.atleast_1d(chord_theta)[0], ang_2_3vec(source_phi_0, source_theta), wavelength)))
+                plt.plot(x, y, 'gs', mfc='none', ms=10, label="South alias location")
+                eastaliasAngularCoords = vec2ang(AliasEast(chord_theta, source_theta, source_phi_0, wavelength, delta_tau, time_samples, m1,m2, return_extra=True)[0])
+                x,y = ang_2_tpp_coords (*eastaliasAngularCoords)
+                plt.plot(x, y, 'gs', mfc='none', ms=10, label="East alias location")
+                x,y = ang_2_tpp_coords (eastaliasAngularCoords[0], source_phi_0 - (eastaliasAngularCoords[1] - source_phi_0))
+                plt.plot(x, y, 'gs', mfc='none', ms=10, label="West alias location")
+                
+            
         if gridlines or plot_chord=="line":
             #handling the grid lines
             #hacky way to get
@@ -142,11 +184,11 @@ def tan_plane_plot (base_theta, base_phi, chord_theta, nx, ny, extent1, extent2,
                 
                 for phi_deg in phi_ticks:
                     phi = np.deg2rad(phi_deg)
-                    plot_const_RA_gridline (phi)
+                    plot_const_RA_gridline (phi, color=gridlinecolor)
                 for theta_deg in theta_ticks: #plot lines of constant dec
                     theta = np.deg2rad(theta_deg)
                     x,y = ang_2_tpp_coords(theta,phitp)
-                    plt.plot(x, y, color="grey", alpha=0.3)#linestyle=(0, (3, 10)))
+                    plt.plot(x, y, color=gridlinecolor, alpha=0.3)#linestyle=(0, (3, 10)))
                     if axis_labels:
                         #we want to find if it crosses the boundary, and if so, write a tick marker
                         cross = np.searchsorted(x, -1)
@@ -157,7 +199,9 @@ def tan_plane_plot (base_theta, base_phi, chord_theta, nx, ny, extent1, extent2,
                 #plt.text(-0.8,-1.1,"Gridline separations: "+str(phi_separation)+" deg (RA), "+str(theta_separation)+" deg (dec)"))
                 #plt.xticks(x_axis_tick_positions, x_axis_tick_labels)
                 ax.set_xticks(x_axis_tick_positions, x_axis_tick_labels)
+                if len(x_axis_tick_positions) > 0: plt.xlabel("RA (Deg)")
                 ax.set_yticks(y_axis_tick_positions, y_axis_tick_labels)
+                if len(y_axis_tick_positions) > 0: plt.ylabel("Dec (Deg)")
                 plt.draw()
             if plot_chord=="line":
                 if isinstance(chord_theta, np.ndarray):
@@ -170,5 +214,8 @@ def tan_plane_plot (base_theta, base_phi, chord_theta, nx, ny, extent1, extent2,
                 
     
 if __name__ == "__main__":
-    tan_plane_plot (np.deg2rad(90-49.322), np.deg2rad(0), np.array([np.deg2rad(90-49.322+1), np.deg2rad(90-49.322), np.deg2rad(90-49.322-1)]), 600,600, np.deg2rad(3), np.deg2rad(3), 0.21, np.deg2rad(90-49.322), np.deg2rad(0), 24, 22, 24.0*3600/600, 600, "", plot_chord="line", gridlines=True)
+    nsamples = 600
+    omega = 360.0/(24.0*3600)
+    tan_plane_plot (np.deg2rad(40), -np.deg2rad(10), np.deg2rad(40), 400,400, np.deg2rad(3), np.deg2rad(3), 0.21, np.deg2rad(40)-np.deg2rad(0.8), -np.deg2rad(10), 24, 22, 20/omega/nsamples, nsamples, "", plot_chord="line", plot_source=True, gridlines=True, highlight_aliases=True)
+    #tan_plane_plot (np.deg2rad(40), -np.deg2rad(5), np.array([np.deg2rad(40),np.deg2rad(38)]), 400,400, np.deg2rad(3), np.deg2rad(3), 0.21, np.deg2rad(40)-np.deg2rad(0.8), -np.deg2rad(5), 24, 22, 10/omega/nsamples, nsamples, "", plot_chord="line", plot_source=True, gridlines=True, plot_nalias=True, plot_ealias=True)
     plt.show()

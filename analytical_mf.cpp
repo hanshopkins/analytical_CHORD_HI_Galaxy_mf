@@ -4,12 +4,12 @@
 #include <math.h>       /* sin, cos, fmod, fabs, asin */
 #include <cmath>        /* cyl_bessel_j, acos */
 #include <omp.h>
-#include<limits>
 #include <stdio.h>
 
 #define D 6.0 //meters
 #define L1 8.5 //north-south dish separation (meters)
 #define L2 6.3 //east-west dish separation (meters)
+#define CHORD_zenith_dec 49.320750
 #define PI 3.14159265358979323846
 #define omega 2*PI/86400 //earth angular velocity in rads/second
 
@@ -130,6 +130,7 @@ extern "C" {void analytic_matched_filter (const double * chord_theta, const doub
         const double * u_i = u + 3*i;
         for (unsigned int k = 0; k < ndithers; k++)
         {
+            double L1_modified = L1*cos(fabs(PI/180*(90-CHORD_zenith_dec) - chord_theta[k])); //accounting for CHORD's baseline shrinking when it points away from zenith
             for (unsigned int j = 0; j < time_samples; j++)
             {
                 double tau = j*delta_tau;
@@ -143,8 +144,8 @@ extern "C" {void analytic_matched_filter (const double * chord_theta, const doub
                 //if (i == 0 && j == 0) std::cout << Bsq_u << std::endl;
                 
                 //computing numerator
-                double cdir1 = PI*L1/wavelength*subtractdot(source_pointing, u_rot, dir1_proj_vec+3*k);
-                double cdir2 = PI*L2/wavelength*subtractdot(source_pointing, u_rot, dir2_proj_vec+3*k);
+                double cdir1 = PI*L1_modified/wavelength*subtractdot(source_pointing, u_rot, dir1_proj_vec+3*k);
+                double cdir2 = PI*L2         /wavelength*subtractdot(source_pointing, u_rot, dir2_proj_vec+3*k);
                 
                 double Bsq_source = Bsq_from_vecs(source_pointing, chord_pointing+3*k, wavelength);
                 ///////////
@@ -171,6 +172,8 @@ extern "C" {double analytic_matched_filter_single_u (const double * chord_theta,
         ang2vec(chord_theta[k] + PI/2, 0, dir1_proj_vec);
         cross(dir1_proj_vec, chord_pointing, dir2_proj_vec);
         
+        double L1_modified = L1*cos(fabs(PI/180*(90-CHORD_zenith_dec) - chord_theta[k])); //accounting for CHORD's baseline shrinking when it points away from zenith
+        
         #pragma omp parallel for reduction(+:numerator_sum,denominator_sum, normalization_sum)
         for (unsigned int j = 0; j < time_samples; j++)
         {
@@ -184,8 +187,8 @@ extern "C" {double analytic_matched_filter_single_u (const double * chord_theta,
             double Bsq_u = Bsq_from_vecs(u_rot, chord_pointing, wavelength);
             
             //computing numerator
-            double cdir1 = PI*L1/wavelength*subtractdot(source_pointing, u_rot, dir1_proj_vec);
-            double cdir2 = PI*L2/wavelength*subtractdot(source_pointing, u_rot, dir2_proj_vec);
+            double cdir1 = PI*L1_modified/wavelength*subtractdot(source_pointing, u_rot, dir1_proj_vec);
+            double cdir2 = PI*L2         /wavelength*subtractdot(source_pointing, u_rot, dir2_proj_vec);
             
             double Bsq_source = Bsq_from_vecs(source_pointing, chord_pointing, wavelength);
             ///////////
@@ -200,8 +203,7 @@ extern "C" {double analytic_matched_filter_single_u (const double * chord_theta,
     return numerator_sum/sqrt(denominator_sum)/normalization;
 }}
 
-extern "C" {void synthesized_beam (const double * chord_theta, const double wavelength, const double source_theta, const double source_phi_0, const unsigned short m1, const unsigned short m2, 
-                                    const double * u, const unsigned int num_u, const double delta_tau, const unsigned int time_samples, const unsigned int ndithers, double * sb)
+extern "C" {void synthesized_beam (const double * chord_theta, const double chord_phi, const double wavelength, const double source_theta, const double source_phi_0, const unsigned short m1, const unsigned short m2, const double * u, const unsigned int num_u, const double delta_tau, const unsigned int time_samples, const unsigned int ndithers, double * sb)
 {
     //calculating the relevant CHORD vectors for each dither direction
     double chord_pointing [3*ndithers];
@@ -209,8 +211,8 @@ extern "C" {void synthesized_beam (const double * chord_theta, const double wave
     double dir2_proj_vec [3*ndithers]; //east/west chord direction
     for (unsigned int k = 0; k < ndithers; k++)
     {
-        ang2vec(chord_theta[k], 0, chord_pointing+3*k);
-        ang2vec(chord_theta[k] + PI/2, 0, dir1_proj_vec+3*k);
+        ang2vec(chord_theta[k], chord_phi, chord_pointing+3*k);
+        ang2vec(chord_theta[k] + PI/2, chord_phi, dir1_proj_vec+3*k);
         cross(dir1_proj_vec+3*k, chord_pointing+3*k, dir2_proj_vec+3*k);
     }
     //calculating rest of matched filter
@@ -222,6 +224,7 @@ extern "C" {void synthesized_beam (const double * chord_theta, const double wave
         const double * u_i = u + 3*i;
         for (unsigned int k = 0; k < ndithers; k++)
         {
+            double L1_modified = L1*cos(fabs(PI/180*(90-CHORD_zenith_dec) - chord_theta[k])); //accounting for CHORD's baseline shrinking when it points away from zenith
             for (unsigned int j = 0; j < time_samples; j++)
             {
                 double tau = j*delta_tau;
@@ -234,8 +237,8 @@ extern "C" {void synthesized_beam (const double * chord_theta, const double wave
                 double Bsq_u = Bsq_from_vecs(u_rot, chord_pointing+3*k, wavelength);
                 
                 //computing numerator
-                double cdir1 = PI*L1/wavelength*subtractdot(source_pointing, u_rot, dir1_proj_vec+3*k);
-                double cdir2 = PI*L2/wavelength*subtractdot(source_pointing, u_rot, dir2_proj_vec+3*k);
+                double cdir1 = PI*L1_modified/wavelength*subtractdot(source_pointing, u_rot, dir1_proj_vec+3*k);
+                double cdir2 = PI*L2         /wavelength*subtractdot(source_pointing, u_rot, dir2_proj_vec+3*k);
                 
                 double Bsq_source = Bsq_from_vecs(source_pointing, chord_pointing+3*k, wavelength);
                 ///////////
