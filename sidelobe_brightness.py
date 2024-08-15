@@ -3,11 +3,7 @@ import matplotlib.pyplot as plt
 #import healpy as hp
 from cpp_amf_wrapper import amf
 from cpp_amf_wrapper import amf_su
-
-import sys
-sys.path.append("/home/hans/Documents/Code")
-from peakfind import peakfind
-from rotate import rotate_arbitrary_axis
+from util import peakfind, rotate_arbitrary_axis
 
 chord_zenith = np.deg2rad(90-49.320750)
 
