@@ -1,5 +1,45 @@
 import numpy as np
 
+def ang2vec (theta,phi):
+    return np.array([np.cos(phi)*np.sin(theta),np.sin(phi)*np.sin(theta), np.cos(theta)]).T
+
+def vec2phi (v):
+    if v[0] > 0:
+        return np.arctan(v[1]/v[0])
+    elif v[0] < 0 and v[1] >= 0:
+        return np.arctan(v[1]/v[0]) + np.pi
+    elif v[0] < 0 and v[1] < 0:
+        return np.arctan(v[1]/v[0]) - np.pi
+    elif v[0] == 0 and v[1] > 0:
+        return np.pi/2
+    elif v[0] == 0 and v[1] < 0:
+        return np.pi/2
+    else:
+        return 0
+
+def vec2ang(v):
+    if v[2] > 0:
+        theta = np.arctan(np.sqrt(v[0]**2 + v[1]**2)/v[2])
+    elif v[2] < 0:
+        theta = np.pi + np.arctan(np.sqrt(v[0]**2 + v[1]**2)/v[2])
+    else:
+        theta = np.pi/2
+    
+    if v[0] > 0:
+        phi = np.arctan(v[1]/v[0])
+    elif v[0] < 0 and v[1] >= 0:
+        phi = np.arctan(v[1]/v[0]) + np.pi
+    elif v[0] < 0 and v[1] < 0:
+        phi = np.arctan(v[1]/v[0]) - np.pi
+    elif v[0] == 0 and v[1] > 0:
+        phi = np.pi/2
+    elif v[0] == 0 and v[1] < 0:
+        phi = np.pi/2
+    else:
+        phi = 0
+    
+    return theta, phi
+
 def rotate_by_phi (v,phi):
     r = np.array([[np.cos(phi), -np.sin(phi), 0],[np.sin(phi), np.cos(phi), 0],[0,0,1]])
     if v.ndim == 1:

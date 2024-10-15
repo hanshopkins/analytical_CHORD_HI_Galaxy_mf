@@ -4,47 +4,22 @@ from cpp_amf_wrapper import amf
 from cpp_amf_wrapper import synthesized_beam
 from numpy.linalg import inv
 from math import floor, ceil
-from sidelobe_brightness import approxAliasNorthu, approxAliasSouthu, AliasEast
+from sidelobe_brightness import approxAliasNorthu, approxAliasSouthu, AliasEast, approxAliasEastu
+from util import ang2vec, vec2ang
 
 def get_integer_ticks (low, high, separation):
     return np.arange(np.ceil(low/separation)*separation, (np.floor(high/separation)+1)*separation, separation)
-
-def ang_2_3vec(phi, theta):
-    return np.asarray([np.sin(theta)*np.cos(phi), np.sin(theta)*np.sin(phi), np.cos(theta)]).T
-
-def vec2ang(v):
-    if v[2] > 0:
-        theta = np.arctan(np.sqrt(v[0]**2 + v[1]**2)/v[2])
-    elif v[2] < 0:
-        theta = np.pi + np.arctan(np.sqrt(v[0]**2 + v[1]**2)/v[2])
-    else:
-        theta = np.pi/2
-    
-    if v[0] > 0:
-        phi = np.arctan(v[1]/v[0])
-    elif v[0] < 0 and v[1] >= 0:
-        phi = np.arctan(v[1]/v[0]) + np.pi
-    elif v[0] < 0 and v[1] < 0:
-        phi = np.arctan(v[1]/v[0]) - np.pi
-    elif v[0] == 0 and v[1] > 0:
-        phi = np.pi/2
-    elif v[0] == 0 and v[1] < 0:
-        phi = np.pi/2
-    else:
-        phi = 0
-    
-    return theta, phi
     
 def peak_at_pos_for_testing(u, source_theta, source_phi):
-    u_source = ang_2_3vec(source_phi,source_theta)
+    u_source = ang2vec(source_theta, source_phi)
     alpha = np.arcsin(np.sqrt(np.sum(np.cross(u_source,u)**2,axis=-1)))
     return np.exp(-(alpha/0.003490658503988659)**2)
 
-def tan_plane_plot (base_theta, base_phi, chord_theta, nx, ny, extent1, extent2, wavelength, source_theta, source_phi_0, m1, m2, delta_tau, time_samples, title, gridlines=False, plot_chord=False, plot_source=False, axis_labels=True, mode="matched filter", chord_phi=0,vmax=None, log=False, colorbar=False, highlight_aliases = False):
+def tan_plane_plot (base_theta, base_phi, chord_theta, nx, ny, extent1, extent2, wavelength, source_theta, source_phi_0, m1, m2, delta_tau, time_samples, title, gridlines=False, plot_chord=False, plot_source=False, axis_labels=True, mode="matched filter", chord_phi=0,vmax=None, log=False, colorbar=False, highlight_aliases = False, cmap="Greys"):
     #design idea for plot chord is it's "point" or True for a single point and "line" for a gridline at CHORD
     testvecs = np.empty([nx,ny,3])
-    basevec = ang_2_3vec(base_phi,base_theta)
-    v1 = ang_2_3vec(base_phi,base_theta - np.pi/2)
+    basevec = ang2vec(base_theta, base_phi)
+    v1 = ang2vec(base_theta - np.pi/2, base_phi)
     v2 = np.cross(v1, basevec)
     
     xls = np.linspace(-1,1,nx) * np.tan(extent1)
@@ -72,10 +47,10 @@ def tan_plane_plot (base_theta, base_phi, chord_theta, nx, ny, extent1, extent2,
     
     fig = plt.figure()
     if log:
-        plt.imshow(values, origin="lower", interpolation = "none", extent = (-1,1,-1,1), cmap="Greys", vmax=vmax), #vmin=vmax-18)
+        plt.imshow(values, origin="lower", interpolation = "none", extent = (-1,1,-1,1), cmap=cmap, vmax=vmax), #vmin=vmax-18)
         gridlinecolor="mediumorchid"
     else:
-        plt.imshow(values, origin="lower", interpolation = "none", extent = (-1,1,-1,1), cmap="Greys", vmax=vmax)
+        plt.imshow(values, origin="lower", interpolation = "none", extent = (-1,1,-1,1), cmap=cmap, vmax=vmax)
         gridlinecolor="grey"
     plt.title(title)
     ax = plt.gca()
@@ -111,19 +86,19 @@ def tan_plane_plot (base_theta, base_phi, chord_theta, nx, ny, extent1, extent2,
         if highlight_aliases:
             if time_samples == 1:
                 #currently not implemented for chord_phi neq 0
-                x,y = ang_2_tpp_coords (*vec2ang(approxAliasNorthu(np.atleast_1d(chord_theta)[0], ang_2_3vec(source_phi_0, source_theta), wavelength, phi=chord_phi)))
+                x,y = ang_2_tpp_coords (*vec2ang(approxAliasNorthu(np.atleast_1d(chord_theta)[0], ang2vec(source_theta,source_phi_0), wavelength, phi=chord_phi)))
                 plt.plot(x, y, 'gs', mfc='none', ms=10, label="North alias location")
-                x,y = ang_2_tpp_coords (*vec2ang(approxAliasSouthu(np.atleast_1d(chord_theta)[0], ang_2_3vec(source_phi_0, source_theta), wavelength, phi=chord_phi)))
+                x,y = ang_2_tpp_coords (*vec2ang(approxAliasSouthu(np.atleast_1d(chord_theta)[0], ang2vec(source_theta,source_phi_0), wavelength, phi=chord_phi)))
                 plt.plot(x, y, 'gs', mfc='none', ms=10, label="South alias location")
-                eastaliasAngularCoords = vec2ang(approxAliasEastu(np.atleast_1d(chord_theta)[0], ang_2_3vec(source_phi_0, source_theta), wavelength, phi=chord_phi))
+                eastaliasAngularCoords = vec2ang(approxAliasEastu(np.atleast_1d(chord_theta)[0], ang2vec(source_theta,source_phi_0), wavelength, phi=chord_phi))
                 x,y = ang_2_tpp_coords (*eastaliasAngularCoords)
                 plt.plot(x, y, 'gs', mfc='none', ms=10, label="East alias location")
                 x,y = ang_2_tpp_coords (eastaliasAngularCoords[0], source_phi_0 - (eastaliasAngularCoords[1] - source_phi_0))
                 plt.plot(x, y, 'gs', mfc='none', ms=10, label="West alias location")
             else:
-                x,y = ang_2_tpp_coords (*vec2ang(approxAliasNorthu(np.atleast_1d(chord_theta)[0], ang_2_3vec(source_phi_0, source_theta), wavelength)))
+                x,y = ang_2_tpp_coords (*vec2ang(approxAliasNorthu(np.atleast_1d(chord_theta)[0], ang2vec(source_theta,source_phi_0), wavelength)))
                 plt.plot(x, y, 'gs', mfc='none', ms=10, label="North alias location")
-                x,y = ang_2_tpp_coords (*vec2ang(approxAliasSouthu(np.atleast_1d(chord_theta)[0], ang_2_3vec(source_phi_0, source_theta), wavelength)))
+                x,y = ang_2_tpp_coords (*vec2ang(approxAliasSouthu(np.atleast_1d(chord_theta)[0], ang2vec(source_theta,source_phi_0), wavelength)))
                 plt.plot(x, y, 'gs', mfc='none', ms=10, label="South alias location")
                 eastaliasAngularCoords = vec2ang(AliasEast(chord_theta, source_theta, source_phi_0, wavelength, delta_tau, time_samples, m1,m2, return_extra=True)[0])
                 x,y = ang_2_tpp_coords (*eastaliasAngularCoords)
@@ -214,8 +189,10 @@ def tan_plane_plot (base_theta, base_phi, chord_theta, nx, ny, extent1, extent2,
                 
     
 if __name__ == "__main__":
-    nsamples = 600
+    nsamples = 1
     omega = 360.0/(24.0*3600)
-    tan_plane_plot (np.deg2rad(40), -np.deg2rad(10), np.deg2rad(40), 400,400, np.deg2rad(3), np.deg2rad(3), 0.21, np.deg2rad(40)-np.deg2rad(0.8), -np.deg2rad(10), 24, 22, 20/omega/nsamples, nsamples, "", plot_chord="line", plot_source=True, gridlines=True, highlight_aliases=True)
+    #tan_plane_plot (np.deg2rad(40), -np.deg2rad(10), np.deg2rad(40), 400,400, np.deg2rad(3), np.deg2rad(3), 0.21, np.deg2rad(40)-np.deg2rad(0.8), -np.deg2rad(10), 24, 22, 20/omega/nsamples, nsamples, "", plot_chord="line", plot_source=True, gridlines=True, highlight_aliases=True)
     #tan_plane_plot (np.deg2rad(40), -np.deg2rad(5), np.array([np.deg2rad(40),np.deg2rad(38)]), 400,400, np.deg2rad(3), np.deg2rad(3), 0.21, np.deg2rad(40)-np.deg2rad(0.8), -np.deg2rad(5), 24, 22, 10/omega/nsamples, nsamples, "", plot_chord="line", plot_source=True, gridlines=True, plot_nalias=True, plot_ealias=True)
+    tan_plane_plot (np.deg2rad(45), np.deg2rad(0), np.deg2rad(45), 300, 300, np.deg2rad(10), np.deg2rad(10), 0.21, np.deg2rad(45), np.deg2rad(0), 2, 2, 24*3600.0/nsamples, nsamples, "", mode="matched filter", gridlines=True, plot_chord="line")
     plt.show()
+    

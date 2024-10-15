@@ -3,49 +3,9 @@ import matplotlib.pyplot as plt
 #import healpy as hp
 from cpp_amf_wrapper import amf
 from cpp_amf_wrapper import amf_su
-from util import peakfind, rotate_arbitrary_axis
+from util import peakfind, rotate_arbitrary_axis, ang2vec, vec2phi, vec2ang
 
 chord_zenith = np.deg2rad(90-49.320750)
-
-def ang2vec (theta,phi):
-    return np.array([np.cos(phi)*np.sin(theta),np.sin(phi)*np.sin(theta), np.cos(theta)]).T
-
-def vec2phi (v):
-    if v[0] > 0:
-        return np.arctan(v[1]/v[0])
-    elif v[0] < 0 and v[1] >= 0:
-        return np.arctan(v[1]/v[0]) + np.pi
-    elif v[0] < 0 and v[1] < 0:
-        return np.arctan(v[1]/v[0]) - np.pi
-    elif v[0] == 0 and v[1] > 0:
-        return np.pi/2
-    elif v[0] == 0 and v[1] < 0:
-        return np.pi/2
-    else:
-        return 0
-
-def vec2ang(v):
-    if v[2] > 0:
-        theta = np.arctan(np.sqrt(v[0]**2 + v[1]**2)/v[2])
-    elif v[2] < 0:
-        theta = np.pi + np.arctan(np.sqrt(v[0]**2 + v[1]**2)/v[2])
-    else:
-        theta = np.pi/2
-    
-    if v[0] > 0:
-        phi = np.arctan(v[1]/v[0])
-    elif v[0] < 0 and v[1] >= 0:
-        phi = np.arctan(v[1]/v[0]) + np.pi
-    elif v[0] < 0 and v[1] < 0:
-        phi = np.arctan(v[1]/v[0]) - np.pi
-    elif v[0] == 0 and v[1] > 0:
-        phi = np.pi/2
-    elif v[0] == 0 and v[1] < 0:
-        phi = np.pi/2
-    else:
-        phi = 0
-    
-    return theta, phi
 
 def sidelobe_brightness_NS (chord_theta_possibly_dithered, source_theta, source_phi_0, wavelength, delta_tau, time_samples, L1, m1, m2): #deprecated
     if isinstance(chord_theta_possibly_dithered,np.ndarray): #dithering case
