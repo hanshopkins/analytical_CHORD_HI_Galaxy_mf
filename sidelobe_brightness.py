@@ -174,8 +174,12 @@ def SearchOverAngleGrid(center, n, halfwidth, tol, func):
     else:
         return SearchOverAngleGrid(argmax, n, halfwidth/n, tol, func)
 
-def AliasEast (chord_theta, source_theta, source_phi_0, wavelength, delta_tau, time_samples, m1, m2, tol=1e-5, return_extra=False):
+def AliasEast (chord_theta_possibly_dithered, source_theta, source_phi_0, wavelength, delta_tau, time_samples, m1, m2, tol=1e-5, return_extra=False):
     source_u = ang2vec(source_theta, source_phi_0)
+    if isinstance(chord_theta_possibly_dithered,np.ndarray):
+        chord_theta = chord_theta_possibly_dithered[0] #for dithering let's assume it's where the first chord theta would predict
+    else:
+        chord_theta = chord_theta_possibly_dithered
     aau = approxAliasEastu(chord_theta, source_u, wavelength)
     
     #in this direction we no longer have any symmetry to search along only one line. We have to find a peak via an iterative grid method.
@@ -185,6 +189,88 @@ def AliasEast (chord_theta, source_theta, source_phi_0, wavelength, delta_tau, t
     
     if return_extra: return bestu, amf_su(chord_theta, wavelength, source_theta, source_phi_0, m1, m2, bestu, delta_tau, time_samples)
     else: return amf_su(chord_theta, wavelength, source_theta, source_phi_0, m1, m2, bestu, delta_tau, time_samples)
+
+def gridify_points (p, Lx, Ly, lminx, lminy):
+	lbx = np.linspace(lminx,Lx,round(Lx/lminx))
+	lby = np.linspace(lminy,Ly,round(Ly/lminy))
+	fx = np.empty([lbx.shape[0], p.shape[0]],dtype=int)
+	fy = np.empty([lby.shape[0], p.shape[0]],dtype=int)
+	for j in range(p.shape[0]):
+		fx[:,j] = np.round((p[j,0]-p[0,0])/lbx)
+		fy[:,j] = np.round((p[j,1]-p[0,1])/lby)
+	chisq_x = np.sum((fx*lbx[np.newaxis].T - (p[:,0]-p[0,0]))**2,axis = 1) + p.shape[0]*lminx**2*Lx**2/lbx**2
+	#fig = plt.figure()
+	#plt.plot(lbx, chisq_x)
+	#plt.yscale("log")
+	#plt.show()
+	#assert(1==0)
+	chisq_y = np.sum((fy*lby[np.newaxis].T - (p[:,1]-p[0,1]))**2,axis = 1) + p.shape[0]*lminy**2*Ly**2/lby**2
+	if False:
+		#now penalizing extra lines
+		nlinesx = np.round(Lx/lbx)
+		for k in range(lbx.shape[0]):
+			idx = 0
+			while True:
+				lineloc = p[0,0] + idx * lbx[k]
+				if lineloc >= Lx:
+					break
+				chisq_x[k] += np.min(p[:,0] - lineloc)**2/nlinesx[k]
+				idx += 1
+			idx = -1
+			while True:
+				lineloc = p[0,0] + idx * lbx[k]
+				if lineloc <= Lx:
+					break
+				chisq_x[k] += np.min(p[:,0] - lineloc)**2/nlinesx[k]
+				idx -= 1
+		nlinesy = np.round(Ly/lby)
+		for k in range(lby.shape[0]):
+			idx = 0
+			while True:
+				lineloc = p[0,1] + idx * lby[k]
+				if lineloc >= Ly:
+					break
+				chisq_y[k] += np.min(p[:,1] - lineloc)**2/nlinesy[k]
+				idx += 1
+			idx = -1
+			while True:
+				lineloc = p[0,1] + idx * lby[k]
+				if lineloc <= Ly:
+					break
+				chisq_y[k] += np.min(p[:,1] - lineloc)**2/nlinesy[k]
+				idx -= 1
+	bestidx_x = np.argmin(chisq_x)
+	bestidx_y = np.argmin(chisq_y)
+	return np.vstack([fx[bestidx_x],fy[bestidx_y]]).T
+
+def flood (i, j, m, floodarray, tol):
+	if i > 0 and j > 0 and i < m.shape[0] and j < m.shape[1]:
+		if floodarray[i,j] == 0:
+			if m[i,j] >= tol:
+				floodarray[i,j] = 1
+				flood(i+1,j, m, floodarray, tol)
+				flood(i,j+1, m, floodarray, tol)
+				flood(i-1,j, m, floodarray, tol)
+				flood(i,j-1, m, floodarray, tol)
+
+def detect_aliases_in_cc_map (cc_map, tol=0.1):
+	#plan is for this to be like a flood algorithm type of thing to find aliases and categorize them by location.
+	found_map = np.zeros(cc_map.shape, dtype=bool)
+	peak_cc = np.empty(0)
+	peak_positions = np.empty([0,2])
+	while True:
+		highest_loc = np.unravel_index(np.argmax(cc_map*np.logical_not(found_map)), cc_map.shape)
+		if cc_map[highest_loc] < tol:
+			break
+		floodarray = np.zeros(cc_map.shape, dtype=bool)
+		flood(highest_loc[0], highest_loc[1], cc_map, floodarray, tol)
+		#now that we have an array of contiguous correlated points, we want to figure out the peak of these.
+		peak_idx = np.unravel_index(np.argmax(cc_map*floodarray), cc_map.shape)
+		peak_cc = np.append(peak_cc, cc_map[peak_idx])
+		peak_positions = np.vstack([peak_positions, np.asarray(peak_idx,dtype=float)[::-1] + np.array([0.5,0.5])]) #have to do np.asarray(peak_idx,dtype=float)[::-1] because the array indices are in the other order
+		found_map = np.logical_or(found_map, floodarray)
+	f = gridify_points (peak_positions, np.max(peak_positions[:,0])-np.min(peak_positions[:,0]), np.max(peak_positions[:,1])-np.min(peak_positions[:,1]), 0.5, 0.5)
+	return peak_cc, peak_positions, f #peak_positions in pixels
 
 if __name__ == "__main__":
     if False: #individual

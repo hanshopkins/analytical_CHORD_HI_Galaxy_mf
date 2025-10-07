@@ -1,11 +1,15 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib
 from cpp_amf_wrapper import amf
 from cpp_amf_wrapper import synthesized_beam
 from numpy.linalg import inv
 from math import floor, ceil
 from sidelobe_brightness import approxAliasNorthu, approxAliasSouthu, AliasEast, approxAliasEastu
 from util import ang2vec, vec2ang
+
+matplotlib.rc('text', usetex=True)
+matplotlib.rc('font', family='serif')
 
 def get_integer_ticks (low, high, separation):
     return np.arange(np.ceil(low/separation)*separation, (np.floor(high/separation)+1)*separation, separation)
@@ -15,8 +19,7 @@ def peak_at_pos_for_testing(u, source_theta, source_phi):
     alpha = np.arcsin(np.sqrt(np.sum(np.cross(u_source,u)**2,axis=-1)))
     return np.exp(-(alpha/0.003490658503988659)**2)
 
-def tan_plane_plot (base_theta, base_phi, chord_theta, nx, ny, extent1, extent2, wavelength, source_theta, source_phi_0, m1, m2, delta_tau, time_samples, title, gridlines=False, plot_chord=False, plot_source=False, axis_labels=True, mode="matched filter", chord_phi=0,vmax=None, log=False, colorbar=False, highlight_aliases = False, cmap="Greys"):
-    #design idea for plot chord is it's "point" or True for a single point and "line" for a gridline at CHORD
+def get_tan_plane_pixelvecs (nx,ny, base_theta, base_phi, extent1, extent2):
     testvecs = np.empty([nx,ny,3])
     basevec = ang2vec(base_theta, base_phi)
     v1 = ang2vec(base_theta - np.pi/2, base_phi)
@@ -33,6 +36,11 @@ def tan_plane_plot (base_theta, base_phi, chord_theta, nx, ny, extent1, extent2,
     np.divide(testvecs[:,:,0],norms, testvecs[:,:,0])
     np.divide(testvecs[:,:,1],norms, testvecs[:,:,1])
     np.divide(testvecs[:,:,2],norms, testvecs[:,:,2])
+    return testvecs, basevec, v1, v2
+
+def tan_plane_plot (base_theta, base_phi, chord_theta, nx, ny, extent1, extent2, wavelength, source_theta, source_phi_0, m1, m2, delta_tau, time_samples, title, gridlines=False, plot_chord=False, plot_source=False, axis_labels=True, mode="matched filter", chord_phi=0,vmax=None, log=False, colorbar=False, highlight_aliases = False, cmap="Greys"):
+    #design idea for plot chord is it's "point" or True for a single point and "line" for a gridline at CHORD
+    testvecs, basevec, v1, v2 = get_tan_plane_pixelvecs(nx,ny,base_theta,base_phi,extent1,extent2)
     
     if mode == "matched filter":
         values = amf (chord_theta, wavelength, source_theta, source_phi_0, m1, m2, testvecs.reshape([nx*ny,3]), delta_tau, time_samples, chord_phi=chord_phi).reshape([ny,nx])
@@ -154,7 +162,7 @@ def tan_plane_plot (base_theta, base_phi, chord_theta, nx, ny, extent1, extent2,
                         cross = np.searchsorted(y[::-1], -1)
                         if cross < x.shape[0] and x[::-1][cross] > -1 and x[::-1][cross] < 1:
                             x_axis_tick_positions.append(x[::-1][cross])
-                            x_axis_tick_labels.append("{degvalue:n}".format(degvalue=np.rad2deg(phi)))
+                            x_axis_tick_labels.append("${degvalue:n}$".format(degvalue=np.rad2deg(phi)))
                             #plt.text(x[::-1][cross]-0.02,-1.07, "{degvalue:n}".format(degvalue=np.rad2deg(phi)))
                 
                 for phi_deg in phi_ticks:
@@ -169,7 +177,7 @@ def tan_plane_plot (base_theta, base_phi, chord_theta, nx, ny, extent1, extent2,
                         cross = np.searchsorted(x, -1)
                         if cross < y.shape[0] and y[cross] < 1 and y[cross] > -1:
                             y_axis_tick_positions.append(y[cross])
-                            y_axis_tick_labels.append("{degvalue:n}".format(degvalue=90-theta_deg)) #converting to dec
+                            y_axis_tick_labels.append("${degvalue:n}$".format(degvalue=90-theta_deg)) #converting to dec
                             #plt.text(-1.14, y[cross], "{degvalue:n}".format(degvalue=theta_deg))
                 #plt.text(-0.8,-1.1,"Gridline separations: "+str(phi_separation)+" deg (RA), "+str(theta_separation)+" deg (dec)"))
                 #plt.xticks(x_axis_tick_positions, x_axis_tick_labels)
@@ -193,6 +201,6 @@ if __name__ == "__main__":
     omega = 360.0/(24.0*3600)
     #tan_plane_plot (np.deg2rad(40), -np.deg2rad(10), np.deg2rad(40), 400,400, np.deg2rad(3), np.deg2rad(3), 0.21, np.deg2rad(40)-np.deg2rad(0.8), -np.deg2rad(10), 24, 22, 20/omega/nsamples, nsamples, "", plot_chord="line", plot_source=True, gridlines=True, highlight_aliases=True)
     #tan_plane_plot (np.deg2rad(40), -np.deg2rad(5), np.array([np.deg2rad(40),np.deg2rad(38)]), 400,400, np.deg2rad(3), np.deg2rad(3), 0.21, np.deg2rad(40)-np.deg2rad(0.8), -np.deg2rad(5), 24, 22, 10/omega/nsamples, nsamples, "", plot_chord="line", plot_source=True, gridlines=True, plot_nalias=True, plot_ealias=True)
-    tan_plane_plot (np.deg2rad(45), np.deg2rad(0), np.deg2rad(45), 300, 300, np.deg2rad(10), np.deg2rad(10), 0.21, np.deg2rad(45), np.deg2rad(0), 2, 2, 24*3600.0/nsamples, nsamples, "", mode="matched filter", gridlines=True, plot_chord="line")
+    tan_plane_plot (np.deg2rad(45), np.deg2rad(-15), np.deg2rad(45), 600, 600, np.deg2rad(5), np.deg2rad(5), 0.21, np.deg2rad(45), np.deg2rad(-15), 22, 24, 24*3600.0/nsamples, nsamples, "", mode="matched filter", gridlines=True, plot_chord="line")
     plt.show()
     

@@ -130,7 +130,7 @@ extern "C" {void analytic_matched_filter (const double * chord_theta, const doub
         const double * u_i = u + 3*i;
         for (unsigned int k = 0; k < ndithers; k++)
         {
-            double L1_modified = L1*cos(fabs(PI/180*(90-CHORD_zenith_dec) - chord_theta[k])); //accounting for CHORD's baseline shrinking when it points away from zenith
+            double L1_modified = L1*cos(PI/180*(90-CHORD_zenith_dec) - chord_theta[k]); //accounting for CHORD's baseline shrinking when it points away from zenith
             for (unsigned int j = 0; j < time_samples; j++)
             {
                 double tau = j*delta_tau;

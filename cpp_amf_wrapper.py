@@ -26,6 +26,9 @@ def amf (chord_theta, wavelength, source_theta, source_phi_0, m1, m2, u, delta_t
             dither_thetas = np.array([chord_theta])
         elif isinstance(chord_theta, np.ndarray):
             dither_thetas = chord_theta
+        else:
+        	raise TypeError("chord_theta is unexpected type")
+        	return None
         
         cpp_amf(dither_thetas, chord_phi, wavelength, source_theta, source_phi_0, m1, m2, u, num_u, delta_tau, time_samples, dither_thetas.shape[0], mfo)
         
@@ -39,6 +42,40 @@ def amf_su (chord_theta, wavelength, source_theta, source_phi_0, m1, m2, u, delt
         dither_thetas = chord_theta
     
     return cpp_amf_su(dither_thetas, wavelength, source_theta, source_phi_0, m1, m2, u, delta_tau, time_samples, dither_thetas.shape[0])
+
+def vec2ang(v):
+    if v[2] > 0:
+        theta = np.arctan(np.sqrt(v[0]**2 + v[1]**2)/v[2])
+    elif v[2] < 0:
+        theta = np.pi + np.arctan(np.sqrt(v[0]**2 + v[1]**2)/v[2])
+    else:
+        theta = np.pi/2
+    
+    if v[0] > 0:
+        phi = np.arctan(v[1]/v[0])
+    elif v[0] < 0 and v[1] >= 0:
+        phi = np.arctan(v[1]/v[0]) + np.pi
+    elif v[0] < 0 and v[1] < 0:
+        phi = np.arctan(v[1]/v[0]) - np.pi
+    elif v[0] == 0 and v[1] > 0:
+        phi = np.pi/2
+    elif v[0] == 0 and v[1] < 0:
+        phi = np.pi/2
+    else:
+        phi = 0
+    
+    return theta, phi
+
+def correlation_coefficient (u1, u2, chord_theta, wavelength, m1, m2, delta_tau, time_samples):
+    #dealing with dithers
+    if isinstance(chord_theta,np.float64) or isinstance(chord_theta,float):
+        dither_thetas = np.array([chord_theta])
+    elif isinstance(chord_theta, np.ndarray):
+        dither_thetas = chord_theta
+    
+    #we have to convert u1 into phi and theta
+    u1theta, u1phi = vec2ang(u1)
+    return cpp_amf_su(dither_thetas, wavelength, u1theta, u1phi, m1, m2, u2, delta_tau, time_samples, dither_thetas.shape[0])
     
 def synthesized_beam (chord_theta, wavelength, source_theta, source_phi_0, m1, m2, u, delta_tau, time_samples, chord_phi=0):
     #chord_theta : CHORD's angle away from the North Pole in radians. If this is a numpy array, this adds dithering. It can just be a float if you don't want dithering.
