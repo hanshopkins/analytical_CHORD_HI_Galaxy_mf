@@ -272,6 +272,20 @@ def detect_aliases_in_cc_map (cc_map, tol=0.1):
 	f = gridify_points (peak_positions, np.max(peak_positions[:,0])-np.min(peak_positions[:,0]), np.max(peak_positions[:,1])-np.min(peak_positions[:,1]), 0.5, 0.5)
 	return peak_cc, peak_positions, f #peak_positions in pixels
 
+def alias_brightnesses_in_cc_map (cc_map, alias_list, tol=0.1):
+	peak_cc, alias_peak_positions, f = detect_aliases_in_cc_map (cc_map, tol)
+	b = np.empty(len(alias_list))
+	for i in range(len(alias_list)):
+		toggle = False
+		for j in range(f.shape[0]):
+			if f[j][0] == alias_list[i][0] and f[j][1] == alias_list[i][1]:
+				b[i] = peak_cc[j]
+				toggle = True
+				break
+		if toggle == False:
+			raise Exception("Missing a desired alias in the correlation coefficient map.")
+	return b
+
 if __name__ == "__main__":
     if False: #individual
         print(AliasNorth(np.deg2rad(90), np.deg2rad(90), 0, 0.21, 24.0*3600/600, 600, 22, 24, return_extra=True))
