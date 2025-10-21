@@ -267,26 +267,28 @@ def detect_aliases_in_cc_map (cc_map, tol=0.1):
 		flood(highest_loc[0], highest_loc[1], cc_map, floodarray, tol)
 		#now that we have an array of contiguous correlated points, we want to figure out the peak of these.
 		peak_idx = np.unravel_index(np.argmax(cc_map*floodarray), cc_map.shape)
-		all_peak_indexes = np.append(all_peak_+indexes, peak_idx)
+		all_peak_indexes = np.append(all_peak_indexes, np.argmax(cc_map*floodarray))
 		peak_cc = np.append(peak_cc, cc_map[peak_idx])
 		peak_positions = np.vstack([peak_positions, np.asarray(peak_idx,dtype=float)[::-1] + np.array([0.5,0.5])]) #have to do np.asarray(peak_idx,dtype=float)[::-1] because the array indices are in the other order
 		found_map = np.logical_or(found_map, floodarray)
 	f = gridify_points (peak_positions, np.max(peak_positions[:,0])-np.min(peak_positions[:,0]), np.max(peak_positions[:,1])-np.min(peak_positions[:,1]), 0.5, 0.5)
-	return peak_cc, all_peak_indexes, f #peak_positions in pixels
+	return peak_cc, all_peak_indexes, f #all_peak_indexes is ravelled index (one number)
 
-def alias_locations_from_cc_map (cc_map, alias_list, tol=0.1):
-	peak_cc, alias_peak_positions, f = detect_aliases_in_cc_map (cc_map, tol)
-	b = np.empty(len(alias_list))
+def pick_specific_aliases (cc_map, alias_list, tol=0.1):
+	peak_cc, peak_indexes, f = detect_aliases_in_cc_map (cc_map, tol)
+	specific_cc = np.empty(len(alias_list))
+	specific_index = np.empty(len(alias_list),dtype=int)
 	for i in range(len(alias_list)):
 		toggle = False
 		for j in range(f.shape[0]):
 			if f[j][0] == alias_list[i][0] and f[j][1] == alias_list[i][1]:
-				b[i] = peak_cc[j]
+				specific_cc[i] = peak_cc[j]
+				specific_index[i] = peak_indexes[j]
 				toggle = True
 				break
 		if toggle == False:
 			raise Exception("Missing a desired alias in the correlation coefficient map.")
-	return b
+	return specific_cc, specific_index
 
 if __name__ == "__main__":
     if False: #individual
