@@ -257,6 +257,7 @@ def detect_aliases_in_cc_map (cc_map, tol=0.1):
 	#plan is for this to be like a flood algorithm type of thing to find aliases and categorize them by location.
 	found_map = np.zeros(cc_map.shape, dtype=bool)
 	peak_cc = np.empty(0)
+	all_peak_indexes = np.empty(0,dtype=int)
 	peak_positions = np.empty([0,2])
 	while True:
 		highest_loc = np.unravel_index(np.argmax(cc_map*np.logical_not(found_map)), cc_map.shape)
@@ -266,13 +267,14 @@ def detect_aliases_in_cc_map (cc_map, tol=0.1):
 		flood(highest_loc[0], highest_loc[1], cc_map, floodarray, tol)
 		#now that we have an array of contiguous correlated points, we want to figure out the peak of these.
 		peak_idx = np.unravel_index(np.argmax(cc_map*floodarray), cc_map.shape)
+		all_peak_indexes = np.append(all_peak_+indexes, peak_idx)
 		peak_cc = np.append(peak_cc, cc_map[peak_idx])
 		peak_positions = np.vstack([peak_positions, np.asarray(peak_idx,dtype=float)[::-1] + np.array([0.5,0.5])]) #have to do np.asarray(peak_idx,dtype=float)[::-1] because the array indices are in the other order
 		found_map = np.logical_or(found_map, floodarray)
 	f = gridify_points (peak_positions, np.max(peak_positions[:,0])-np.min(peak_positions[:,0]), np.max(peak_positions[:,1])-np.min(peak_positions[:,1]), 0.5, 0.5)
-	return peak_cc, peak_positions, f #peak_positions in pixels
+	return peak_cc, all_peak_indexes, f #peak_positions in pixels
 
-def alias_brightnesses_in_cc_map (cc_map, alias_list, tol=0.1):
+def alias_locations_from_cc_map (cc_map, alias_list, tol=0.1):
 	peak_cc, alias_peak_positions, f = detect_aliases_in_cc_map (cc_map, tol)
 	b = np.empty(len(alias_list))
 	for i in range(len(alias_list)):
