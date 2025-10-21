@@ -255,6 +255,7 @@ def flood (i, j, m, floodarray, tol):
 
 def detect_aliases_in_cc_map (cc_map, tol=0.1):
 	#plan is for this to be like a flood algorithm type of thing to find aliases and categorize them by location.
+	#okay this doesn't really work, because the aliases aren't always contiguous. They sometimes split up.
 	found_map = np.zeros(cc_map.shape, dtype=bool)
 	peak_cc = np.empty(0)
 	all_peak_indexes = np.empty(0,dtype=int)
@@ -289,6 +290,83 @@ def pick_specific_aliases (cc_map, alias_list, tol=0.1):
 		if toggle == False:
 			raise Exception("Missing a desired alias in the correlation coefficient map.")
 	return specific_cc, specific_index
+
+def find_four_nearest_in_cc (cc_map, true_pix, xstrip, ystrip, tol=0.1):
+	#true pix should be floats measured in pixels in order x,y
+	#xstrip and ystrip are also in pix
+	found_map = np.zeros(cc_map.shape, dtype=bool)
+	peak_cc = np.empty(0)
+	peak_flat_idx = np.empty(0,dtype=int)
+	peak_positions = np.empty([0,2])
+	
+	#making sure the true_pix is the highest peak and blocking it out from the search
+	floodarray = np.zeros(cc_map.shape, dtype=bool)
+	highest_loc = np.unravel_index(np.argmax(cc_map*np.logical_not(found_map)), cc_map.shape)
+	flood(highest_loc[0], highest_loc[1], cc_map, floodarray, tol)
+	if not floodarray[round(true_pix[0]),round(true_pix[1])]:
+		raise ValueError("true_pix is not located within a correlation peak")
+	found_map = np.logical_or(found_map, floodarray)
+	
+	while True:
+		highest_loc = np.unravel_index(np.argmax(cc_map*np.logical_not(found_map)), cc_map.shape)
+		if cc_map[highest_loc] < tol:
+			break
+		floodarray = np.zeros(cc_map.shape, dtype=bool)
+		flood(highest_loc[0], highest_loc[1], cc_map, floodarray, tol)
+		#now that we have an array of contiguous correlated points, we want to figure out the peak of these.
+		peak_idx = np.unravel_index(np.argmax(cc_map*floodarray), cc_map.shape)
+		peak_flat_idx = np.append(peak_flat_idx, np.argmax(cc_map*floodarray))
+		peak_cc = np.append(peak_cc, cc_map[peak_idx])
+		peak_positions = np.vstack([peak_positions, np.asarray(peak_idx,dtype=float)[::-1] + np.array([0.5,0.5])]) #have to do np.asarray(peak_idx,dtype=float)[::-1] because the array indices are in the other order
+		found_map = np.logical_or(found_map, floodarray)
+	
+	out_cc = np.empty(4)
+	out_flat_idx = np.empty(4,dtype=int)
+	#north alias
+	besti = -1
+	for i in range(peak_positions.shape[0]):
+		if peak_positions[i][0] > true_pix[1] and np.abs(peak_positions[i][1] - true_pix[0]) < xstrip:
+			if besti == -1 or peak_positions[besti][0] > peak_positions[i][0]:
+				besti = i
+	if besti == -1:
+		raise Exception("North alias not found")
+	out_cc[0] = peak_cc[besti]
+	out_flat_idx[0] = peak_flat_idx[besti]
+	
+	#south alias
+	besti = -1
+	for i in range(peak_positions.shape[0]):
+		if peak_positions[i][0] < true_pix[1] and np.abs(peak_positions[i][1] - true_pix[0]) < xstrip:
+			if besti == -1 or peak_positions[besti][0] < peak_positions[i][0]:
+				besti = i
+	if besti == -1:
+		raise Exception("South alias not found")
+	out_cc[1] = peak_cc[besti]
+	out_flat_idx[1] = peak_flat_idx[besti]
+	
+	#east alias
+	besti = -1
+	for i in range(peak_positions.shape[0]):
+		if peak_positions[i][1] > true_pix[0] and np.abs(peak_positions[i][0] - true_pix[1]) < ystrip:
+			if besti == -1 or peak_positions[besti][1] > peak_positions[i][1]:
+				besti = i
+	if besti == -1:
+		raise Exception("East alias not found")
+	out_cc[2] = peak_cc[besti]
+	out_flat_idx[2] = peak_flat_idx[besti]
+	
+	#west alias
+	besti = -1
+	for i in range(peak_positions.shape[0]):
+		if peak_positions[i][1] < true_pix[0] and np.abs(peak_positions[i][0] - true_pix[1]) < ystrip:
+			if besti == -1 or peak_positions[besti][1] < peak_positions[i][1]:
+				besti = i
+	if besti == -1:
+		raise Exception("West alias not found")
+	out_cc[3] = peak_cc[besti]
+	out_flat_idx[3] = peak_flat_idx[besti]
+	
+	return out_cc, out_flat_idx
 
 if __name__ == "__main__":
     if False: #individual
