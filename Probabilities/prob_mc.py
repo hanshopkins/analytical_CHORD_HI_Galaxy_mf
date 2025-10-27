@@ -38,7 +38,7 @@ def produce_R_with_quadratic_interp (us, chord_theta, wavelength, m1, m2, delta_
         	    around_dest[6] = ang2vec(dest_theta+sdt, dest_phi - sdp)
         	    around_dest[7] = ang2vec(dest_theta+sdt, dest_phi)
         	    around_dest[8] = ang2vec(dest_theta+sdt, dest_phi + sdp)
-        		
+			
             ccm = amf (chord_theta, wavelength, source_theta, source_phi_0, m1, m2, around_dest, delta_tau, time_samples).reshape([3,3])
         		
         	    peak, peakx, peaky = fitted_peak_3x3(ccm, 1, 1)
