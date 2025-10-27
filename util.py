@@ -79,3 +79,59 @@ def peakfind (f, guess_low, guess_high, tol=1e-5):
             l = midpoint
         else:
             h = midpoint
+
+def fitquadratic1d (f0,f1,f2):
+	a = 0.5 * (f2 - 2*f1 + f0)
+	if (a == 0.0): raise ValueError("fitquadratic1d failed")
+	b = f1 - a - f0
+	out = -0.5 * b / a
+	if (out < 0) or (out > 2): raise ValueError("fitquadratic1d failed")
+	return out
+
+def find_peak_3x3 (m, i, j):
+	#source for this
+	#https://github.com/dstndstn/astrometry.net/blob/main/util/dcen3x3.c#L82
+
+	#this method won't work if we're right on the edge. In practice this shouldn't happen, or we just make the map bigger.
+	if (i == 0) or (i + 1 == m.shape[0]) or (j == 0) or (j+1 == m.shape[1]):
+		raise ValueError("The center of your peakpixels can't be on the edge.")
+	
+	mx0 = fitquadratic1d(m[i-1][j-1], m[i-1][j+0], m[i-1][j+1])
+	mx1 = fitquadratic1d(m[i+0][j-1], m[i+0][j+0], m[i+0][j+1])
+	mx2 = fitquadratic1d(m[i+1][j-1], m[i+1][j+0], m[i+1][j+1])
+	my0 = fitquadratic1d(m[i-1][j-1], m[i+0][j-1], m[i+1][j-1])
+	my1 = fitquadratic1d(m[i-1][j+0], m[i+0][j+0], m[i+1][j+0])
+	my2 = fitquadratic1d(m[i-1][j+1], m[i+0][j+1], m[i+1][j+1])
+	
+	bx = (mx0 + mx1 + mx2) / 3.
+	mx = (mx2 - mx0) / 2.
+    
+	by = (my0 + my1 + my2) / 3.
+	my = (my2 - my0) / 2.
+    
+	xcen = (mx * (by - my - 1.) + bx) / (1. + mx * my);
+	ycen = (xcen - 1.) * my + by;
+    
+def fitted_peak_3x3 (m,i,j):
+	#this method won't work if we're right on the edge. In practice this shouldn't happen, or we just make the map bigger.
+	if (i == 0) or (i + 1 == m.shape[0]) or (j == 0) or (j+1 == m.shape[1]):
+		raise ValueError("The center of your peakpixels can't be on the edge.")
+	
+	X = np.empty([9,6])
+	x = np.tile(np.array([j-0.5, j+0.5, j+1.5]),3)
+	y = np.tile(np.array([i-0.5, i+0.5, i+1.5])[np.newaxis].T,3).flatten()
+	X[:,0] = x**2
+	X[:,1] = x * y
+	X[:,2] = y**2
+	X[:,3] = x
+	X[:,4] = y
+	X[:,5] = 1
+	
+	Z = m[i-1:i+2,j-1:j+2].flatten()
+	
+	A = (np.linalg.inv(X.T @ X) @ X.T @ Z.flatten()[np.newaxis].T)[:,0]
+	
+	peaky = (A[4]/A[1] - A[3]/(2*A[0]))/(A[1]/(2*A[0])-2*A[2]/A[1])
+	peakx = (-A[1]*peaky - A[3])/(2*A[0])
+	
+	return A[0]*peakx**2 + A[1]*peakx*peaky + A[2]*peaky**2 + A[3]*peakx + A[4]*peaky + A[5], peakx, peaky
