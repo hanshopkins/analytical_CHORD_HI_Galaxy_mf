@@ -244,7 +244,7 @@ def gridify_points (p, Lx, Ly, lminx, lminy):
 	return np.vstack([fx[bestidx_x],fy[bestidx_y]]).T
 
 def flood (i, j, m, floodarray, tol):
-	if i > 0 and j > 0 and i < m.shape[0] and j < m.shape[1]:
+	if i >= 0 and j >= 0 and i < m.shape[0] and j < m.shape[1]:
 		if floodarray[i,j] == 0:
 			if m[i,j] >= tol:
 				floodarray[i,j] = 1
@@ -303,7 +303,7 @@ def find_four_nearest_in_cc (cc_map, true_pix, xstrip, ystrip, tol=0.1):
 	floodarray = np.zeros(cc_map.shape, dtype=bool)
 	highest_loc = np.unravel_index(np.argmax(cc_map*np.logical_not(found_map)), cc_map.shape)
 	flood(highest_loc[0], highest_loc[1], cc_map, floodarray, tol)
-	if not floodarray[round(true_pix[0]),round(true_pix[1])]:
+	if not floodarray[round(true_pix[1]),round(true_pix[0])]:
 		raise ValueError("true_pix is not located within a correlation peak")
 	found_map = np.logical_or(found_map, floodarray)
 	
@@ -325,8 +325,8 @@ def find_four_nearest_in_cc (cc_map, true_pix, xstrip, ystrip, tol=0.1):
 	#north alias
 	besti = -1
 	for i in range(peak_positions.shape[0]):
-		if peak_positions[i][0] > true_pix[1] and np.abs(peak_positions[i][1] - true_pix[0]) < xstrip:
-			if besti == -1 or peak_positions[besti][0] > peak_positions[i][0]:
+		if peak_positions[i][1] > true_pix[1] and np.abs(peak_positions[i][0] - true_pix[0]) < xstrip:
+			if besti == -1 or peak_positions[besti][1] > peak_positions[i][1]:
 				besti = i
 	if besti == -1:
 		raise Exception("North alias not found")
@@ -336,8 +336,8 @@ def find_four_nearest_in_cc (cc_map, true_pix, xstrip, ystrip, tol=0.1):
 	#south alias
 	besti = -1
 	for i in range(peak_positions.shape[0]):
-		if peak_positions[i][0] < true_pix[1] and np.abs(peak_positions[i][1] - true_pix[0]) < xstrip:
-			if besti == -1 or peak_positions[besti][0] < peak_positions[i][0]:
+		if peak_positions[i][1] < true_pix[1] and np.abs(peak_positions[i][0] - true_pix[0]) < xstrip:
+			if besti == -1 or peak_positions[besti][1] < peak_positions[i][1]:
 				besti = i
 	if besti == -1:
 		raise Exception("South alias not found")
@@ -347,8 +347,8 @@ def find_four_nearest_in_cc (cc_map, true_pix, xstrip, ystrip, tol=0.1):
 	#east alias
 	besti = -1
 	for i in range(peak_positions.shape[0]):
-		if peak_positions[i][1] > true_pix[0] and np.abs(peak_positions[i][0] - true_pix[1]) < ystrip:
-			if besti == -1 or peak_positions[besti][1] > peak_positions[i][1]:
+		if peak_positions[i][0] > true_pix[0] and np.abs(peak_positions[i][1] - true_pix[1]) < ystrip:
+			if besti == -1 or peak_positions[besti][0] > peak_positions[i][0]:
 				besti = i
 	if besti == -1:
 		raise Exception("East alias not found")
@@ -358,8 +358,8 @@ def find_four_nearest_in_cc (cc_map, true_pix, xstrip, ystrip, tol=0.1):
 	#west alias
 	besti = -1
 	for i in range(peak_positions.shape[0]):
-		if peak_positions[i][1] < true_pix[0] and np.abs(peak_positions[i][0] - true_pix[1]) < ystrip:
-			if besti == -1 or peak_positions[besti][1] < peak_positions[i][1]:
+		if peak_positions[i][0] < true_pix[0] and np.abs(peak_positions[i][1] - true_pix[1]) < ystrip:
+			if besti == -1 or peak_positions[besti][0] < peak_positions[i][0]:
 				besti = i
 	if besti == -1:
 		raise Exception("West alias not found")
