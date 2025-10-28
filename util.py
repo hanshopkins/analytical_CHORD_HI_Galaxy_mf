@@ -111,6 +111,9 @@ def find_peak_3x3 (m, i, j):
     
 	xcen = (mx * (by - my - 1.) + bx) / (1. + mx * my);
 	ycen = (xcen - 1.) * my + by;
+	#apparently xcen and ycen are between 0 and 2. We want to convert this back to pixel units first.
+	
+	return xcen, ycen
     
 def fitted_peak_3x3 (m,i,j):
 	#this method won't work if we're right on the edge. In practice this shouldn't happen, or we just make the map bigger.
