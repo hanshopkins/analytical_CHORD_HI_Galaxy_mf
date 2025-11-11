@@ -13,7 +13,7 @@ def vec2phi (v):
     elif v[0] == 0 and v[1] > 0:
         return np.pi/2
     elif v[0] == 0 and v[1] < 0:
-        return np.pi/2
+        return -np.pi/2
     else:
         return 0
 
@@ -34,7 +34,7 @@ def vec2ang(v):
     elif v[0] == 0 and v[1] > 0:
         phi = np.pi/2
     elif v[0] == 0 and v[1] < 0:
-        phi = np.pi/2
+        phi = -np.pi/2
     else:
         phi = 0
     
