@@ -137,4 +137,10 @@ def fitted_peak_3x3 (m,i,j):
 	peaky = (A[4]/A[1] - A[3]/(2*A[0]))/(A[1]/(2*A[0])-2*A[2]/A[1])
 	peakx = (-A[1]*peaky - A[3])/(2*A[0])
 	
-	return A[0]*peakx**2 + A[1]*peakx*peaky + A[2]*peaky**2 + A[3]*peakx + A[4]*peaky + A[5], peakx, peaky
+	xcen = peakx - j + 1
+	ycen = peaky - i + 1
+	if xcen < -0.5 or xcen > 2.5 or ycen < -0.5 or ycen > 2.5:
+		print("Array that we're fitting the peak on:", m[i-1:i+2, j-1:j+2])
+		raise ValueError("fitted peak not in the right area. (xcen, ycen) found is ("+str(xcen)+", "+str(ycen)+")")
+
+	return A[0]*peakx**2 + A[1]*peakx*peaky + A[2]*peaky**2 + A[3]*peakx + A[4]*peaky + A[5], xcen, ycen

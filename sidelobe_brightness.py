@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 #import healpy as hp
 from cpp_amf_wrapper import amf
 from cpp_amf_wrapper import amf_su
-from util import peakfind, rotate_arbitrary_axis, ang2vec, vec2phi, vec2ang, find_peak_3x3
+from util import peakfind, rotate_arbitrary_axis, ang2vec, vec2phi, vec2ang, fitted_peak_3x3
 
 chord_zenith = np.deg2rad(90-49.320750)
 
@@ -368,12 +368,12 @@ def find_four_nearest_in_cc (cc_map, true_pix, xstrip, ystrip, tol=0.1):
 	
 	return out_cc, out_flat_idx
 
-def xcenycen_to_u (us, peak_positions, i, xcen, ycen):
+def xcenycen_to_u (us, peak_idx, xcen, ycen):
 	#xcen/ycen are between 0 and 2, where 0 is the center of the left pixel.
-	dlt, dlp = vec2ang(us[peak_positions[i][0]-1, peak_positions[i][1]-1])
-	urt, urp = vec2ang(us[peak_positions[i][0]+1, peak_positions[i][1]+1])
+	dlt, dlp = vec2ang(us[peak_idx[0]-1, peak_idx[1]-1])
+	urt, urp = vec2ang(us[peak_idx[0]+1, peak_idx[1]+1])
 	pft = dlt - (dlt-urt)*ycen/2
-	pfp = dlp + (urp-dlt)*xcen/2
+	pfp = dlp + (urp-dlp)*xcen/2
 	return ang2vec(pft,pfp)
 
 def find_four_nearest_in_cc_smoothing (cc_map, us, true_pix, xstrip, ystrip, tol=0.1):
@@ -389,7 +389,7 @@ def find_four_nearest_in_cc_smoothing (cc_map, us, true_pix, xstrip, ystrip, tol
 	highest_loc = np.unravel_index(np.argmax(cc_map*np.logical_not(found_map)), cc_map.shape)
 	flood(highest_loc[0], highest_loc[1], cc_map, floodarray, tol)
 	if not floodarray[round(true_pix[0]),round(true_pix[1])]:
-		raise ValueError("true_pix is not located within a correlation peak")
+		raise ValueError("true_pix is not located within a correlation peak. The max point is", highest_loc, "and true_pix is", true_pix)
 	found_map = np.logical_or(found_map, floodarray)
 	
 	while True:
@@ -404,7 +404,7 @@ def find_four_nearest_in_cc_smoothing (cc_map, us, true_pix, xstrip, ystrip, tol
 		peak_cc = np.append(peak_cc, cc_map[peak_idx])
 		peak_positions = np.vstack([peak_positions, np.asarray(peak_idx,dtype=float)[::-1] + np.array([0.5,0.5])]) #have to do np.asarray(peak_idx,dtype=float)[::-1] because the array indices are in the other order
 		found_map = np.logical_or(found_map, floodarray)
-	
+
 	out_us = np.empty([4,3])
 	#north alias
 	besti = -1
@@ -414,10 +414,10 @@ def find_four_nearest_in_cc_smoothing (cc_map, us, true_pix, xstrip, ystrip, tol
 				besti = i
 	if besti == -1:
 		raise Exception("North alias not found")
-	
-	xcen, ycen = find_peak_3x3(cc_map, peak_positions[besti][0], peak_positions[besti][1]) 
-	out_us[0] = xcenycen_to_u (us, peak_positions, besti, xcen, ycen)
-	
+	peak_unraveled_idx = np.unravel_index(peak_flat_idx[besti], cc_map.shape)
+	peakval, xcen, ycen = fitted_peak_3x3(cc_map, peak_unraveled_idx[0], peak_unraveled_idx[1])
+	out_us[0] = xcenycen_to_u (us, peak_unraveled_idx, xcen, ycen)
+
 	#south alias
 	besti = -1
 	for i in range(peak_positions.shape[0]):
@@ -426,8 +426,9 @@ def find_four_nearest_in_cc_smoothing (cc_map, us, true_pix, xstrip, ystrip, tol
 				besti = i
 	if besti == -1:
 		raise Exception("South alias not found")
-	xcen, ycen = find_peak_3x3(cc_map, peak_positions[besti][0], peak_positions[besti][1]) 
-	out_us[1] = xcenycen_to_u (us, peak_positions, besti, xcen, ycen)
+	peak_unraveled_idx = np.unravel_index(peak_flat_idx[besti], cc_map.shape)
+	peakval, xcen, ycen = fitted_peak_3x3(cc_map, peak_unraveled_idx[0], peak_unraveled_idx[1])
+	out_us[1] = xcenycen_to_u (us, peak_unraveled_idx, xcen, ycen)
 	
 	#east alias
 	besti = -1
@@ -437,8 +438,9 @@ def find_four_nearest_in_cc_smoothing (cc_map, us, true_pix, xstrip, ystrip, tol
 				besti = i
 	if besti == -1:
 		raise Exception("East alias not found")
-	xcen, ycen = find_peak_3x3(cc_map, peak_positions[besti][0], peak_positions[besti][1]) 
-	out_us[2] = xcenycen_to_u (us, peak_positions, besti, xcen, ycen)
+	peak_unraveled_idx = np.unravel_index(peak_flat_idx[besti], cc_map.shape)
+	peakval, xcen, ycen = fitted_peak_3x3(cc_map, peak_unraveled_idx[0], peak_unraveled_idx[1])
+	out_us[2] = xcenycen_to_u (us, peak_unraveled_idx, xcen, ycen)
 	
 	#west alias
 	besti = -1
@@ -448,8 +450,9 @@ def find_four_nearest_in_cc_smoothing (cc_map, us, true_pix, xstrip, ystrip, tol
 				besti = i
 	if besti == -1:
 		raise Exception("West alias not found")
-	xcen, ycen = find_peak_3x3(cc_map, peak_positions[besti][0], peak_positions[besti][1]) 
-	out_us[3] = xcenycen_to_u (us, peak_positions, besti, xcen, ycen)
+	peak_unraveled_idx = np.unravel_index(peak_flat_idx[besti], cc_map.shape)
+	peakval, xcen, ycen = fitted_peak_3x3(cc_map, peak_unraveled_idx[0], peak_unraveled_idx[1])
+	out_us[3] = xcenycen_to_u (us, peak_unraveled_idx, xcen, ycen)
 	
 	return out_us
 
