@@ -157,7 +157,7 @@ def fitted_peak_rectangle (m):
 	X[:,4] = y
 	X[:,5] = 1
 	
-	z = m.flatten()
+	Z = m.flatten()
 	
 	A = (np.linalg.inv(X.T @ X) @ X.T @ Z.flatten()[np.newaxis].T)[:,0]
 	peaky = (A[4]/A[1] - A[3]/(2*A[0]))/(A[1]/(2*A[0])-2*A[2]/A[1])
