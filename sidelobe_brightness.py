@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 #import healpy as hp
 from cpp_amf_wrapper import amf
 from cpp_amf_wrapper import amf_su
-from util import peakfind, rotate_arbitrary_axis, ang2vec, vec2phi, vec2ang, fitted_peak_3x3
+from util import peakfind, rotate_arbitrary_axis, ang2vec, vec2phi, vec2ang, fitted_peak_rectangle
 
 chord_zenith = np.deg2rad(90-49.320750)
 
