@@ -368,12 +368,24 @@ def find_four_nearest_in_cc (cc_map, true_pix, xstrip, ystrip, tol=0.1):
 	
 	return out_cc, out_flat_idx
 
-def xcenycen_to_u (us, peak_idx, xcen, ycen):
+def xcenycen_to_u (us, peak_idx, xcen, ycen): #function useful for fitted_peak_3x3
 	#xcen/ycen are between 0 and 2, where 0 is the center of the left pixel.
 	dlt, dlp = vec2ang(us[peak_idx[0]-1, peak_idx[1]-1])
 	urt, urp = vec2ang(us[peak_idx[0]+1, peak_idx[1]+1])
 	pft = dlt - (dlt-urt)*ycen/2
 	pfp = dlp + (urp-dlp)*xcen/2
+	return ang2vec(pft,pfp)
+
+def peaku_from_peak_cutout (m, us, boundaries):
+	peakval, x, y = fitted_peak_rectangle (m[boundaries[0]:boundaries[1]:1, boundaries[2]:boundaries[3]+1])
+	downi = int(boundaries[1] - y) #pretty sure this is right
+	leftj = int(boundaries[2] + x)
+	dlt, dlp = vec2ang(us[downi, leftj])
+	urt, urp = vec2ang(us[downi-1, leftj+1])
+	yfrac = (boundaries[1] - y) - downi
+	xfrac = (boundaries[2] + x) - leftj
+	pft = dlt - (dlt-urt)*yfrac
+	pfp = dlp + (urp-dlp)*xfrac
 	return ang2vec(pft,pfp)
 
 def find_four_nearest_in_cc_smoothing (cc_map, us, true_pix, xstrip, ystrip, tol=0.1):
@@ -382,7 +394,8 @@ def find_four_nearest_in_cc_smoothing (cc_map, us, true_pix, xstrip, ystrip, tol
 	found_map = np.zeros(cc_map.shape, dtype=bool)
 	peak_cc = np.empty(0)
 	peak_flat_idx = np.empty(0,dtype=int)
-	peak_positions = np.empty([0,2])
+	floodfill_boundaries = np.empty([0,4],dtype=int)
+	peak_positions = np.empty([0,2])	
 	
 	#making sure the true_pix is the highest peak and blocking it out from the search
 	floodarray = np.zeros(cc_map.shape, dtype=bool)
@@ -404,6 +417,9 @@ def find_four_nearest_in_cc_smoothing (cc_map, us, true_pix, xstrip, ystrip, tol
 		peak_cc = np.append(peak_cc, cc_map[peak_idx])
 		peak_positions = np.vstack([peak_positions, np.asarray(peak_idx,dtype=float)[::-1] + np.array([0.5,0.5])]) #have to do np.asarray(peak_idx,dtype=float)[::-1] because the array indices are in the other order
 		found_map = np.logical_or(found_map, floodarray)
+		
+		rows_for_bb, cols_for_bb = np.nonzero(floodarray)
+		floodfill_boundaries = np.vstack((floodfill_boundaries, [np.min(rows_for_bb), np.max(rows_for_bb), np.min(cols_for_bb), np.max(cols_for_bb)]))
 
 	out_us = np.empty([4,3])
 	#north alias
@@ -414,9 +430,7 @@ def find_four_nearest_in_cc_smoothing (cc_map, us, true_pix, xstrip, ystrip, tol
 				besti = i
 	if besti == -1:
 		raise Exception("North alias not found")
-	peak_unraveled_idx = np.unravel_index(peak_flat_idx[besti], cc_map.shape)
-	peakval, xcen, ycen = fitted_peak_3x3(cc_map, peak_unraveled_idx[0], peak_unraveled_idx[1])
-	out_us[0] = xcenycen_to_u (us, peak_unraveled_idx, xcen, ycen)
+	out_us[0] = peaku_from_peak_cutout (cc_map, us, floodfill_boundaries[besti])
 
 	#south alias
 	besti = -1
@@ -426,9 +440,7 @@ def find_four_nearest_in_cc_smoothing (cc_map, us, true_pix, xstrip, ystrip, tol
 				besti = i
 	if besti == -1:
 		raise Exception("South alias not found")
-	peak_unraveled_idx = np.unravel_index(peak_flat_idx[besti], cc_map.shape)
-	peakval, xcen, ycen = fitted_peak_3x3(cc_map, peak_unraveled_idx[0], peak_unraveled_idx[1])
-	out_us[1] = xcenycen_to_u (us, peak_unraveled_idx, xcen, ycen)
+	out_us[1] = peaku_from_peak_cutout (cc_map, us, floodfill_boundaries[besti])
 	
 	#east alias
 	besti = -1
@@ -438,9 +450,7 @@ def find_four_nearest_in_cc_smoothing (cc_map, us, true_pix, xstrip, ystrip, tol
 				besti = i
 	if besti == -1:
 		raise Exception("East alias not found")
-	peak_unraveled_idx = np.unravel_index(peak_flat_idx[besti], cc_map.shape)
-	peakval, xcen, ycen = fitted_peak_3x3(cc_map, peak_unraveled_idx[0], peak_unraveled_idx[1])
-	out_us[2] = xcenycen_to_u (us, peak_unraveled_idx, xcen, ycen)
+	out_us[2] = peaku_from_peak_cutout (cc_map, us, floodfill_boundaries[besti])
 	
 	#west alias
 	besti = -1
@@ -450,9 +460,7 @@ def find_four_nearest_in_cc_smoothing (cc_map, us, true_pix, xstrip, ystrip, tol
 				besti = i
 	if besti == -1:
 		raise Exception("West alias not found")
-	peak_unraveled_idx = np.unravel_index(peak_flat_idx[besti], cc_map.shape)
-	peakval, xcen, ycen = fitted_peak_3x3(cc_map, peak_unraveled_idx[0], peak_unraveled_idx[1])
-	out_us[3] = xcenycen_to_u (us, peak_unraveled_idx, xcen, ycen)
+	out_us[3] = peaku_from_peak_cutout (cc_map, us, floodfill_boundaries[besti])
 	
 	return out_us
 
