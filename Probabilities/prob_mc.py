@@ -47,8 +47,7 @@ def produce_R_with_quadratic_interp (us, chord_theta, wavelength, m1, m2, delta_
             R[j][i] = peak
     return R
 
-def montecarlo_probability (R, nsigma_source, nsigma_threshold, max_attempts=10, tol=0.001, seed=1234):
-    samples_per_attempt=1000000
+def montecarlo_probability (R, nsigma_source, nsigma_threshold, max_attempts=10, tol=0.001, seed=1234, samples_per_attempt=1000000):
     mu = R[0] * nsigma_source
     cov = R
     
