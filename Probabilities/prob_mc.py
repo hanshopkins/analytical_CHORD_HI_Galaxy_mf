@@ -47,15 +47,47 @@ def produce_R_with_quadratic_interp (us, chord_theta, wavelength, m1, m2, delta_
             R[j][i] = peak
     return R
 
-def montecarlo_probability (R, nsigma_source, nsigma_threshold, max_attempts=10, tol=0.001, seed=1234, samples_per_attempt=1000000):
+def montecarlo_probability (R, nsigma_source, nsigma_threshold, max_attempts=10, tol=0.001, seed=1234, samples_per_attempt=100000):
     mu = R[0] * nsigma_source
     cov = R
     
-    #old wrong definitions
-    #mu = np.insert(R[:num_aliases],0,1) #partial definition of mu to help the definition of cov. Will be modified later.
-    #cov = np.tile(mu,(mu.shape[0],1)) * np.tile(mu,(mu.shape[0],1)).T
-    #np.fill_diagonal(cov,1)
-    #mu = mu * nsigma_source
+    rng = np.random.default_rng(seed=seed)
+    
+    nsamples=0
+    detectSum=0
+    confusionSum=0
+    noConfusionProbability=-1
+    for i in range(max_attempts):
+        samples = rng.multivariate_normal(mu, cov, size=samples_per_attempt)
+        nsamples += samples_per_attempt
+        detects = np.any(samples>nsigma_threshold,axis=1)
+        detectSum += np.sum(detects)
+        samples_with_detects = samples[np.nonzero(detects)]
+        confusionSum += np.sum(np.any(samples_with_detects[:,1:] > samples_with_detects[:,0][np.newaxis].T,axis=1))
+        temp_ncp = 1-(detectSum+confusionSum)/nsamples
+        if np.abs(noConfusionProbability-temp_ncp) < tol:
+            noConfusionProbability = temp_ncp
+            break
+        noConfusionProbability = temp_ncp
+    return 1-detectSum/nsamples, confusionSum/nsamples
+
+def montecarlo_probability_only_mislocation_region (R, nsigma_source, nsigma_threshold, max_attempts=10, tol=0.001, seed=1234, samples_per_attempt=100000):
+    mu = R[0] * nsigma_source
+    cov = R
+    
+    #we want to only sample points that are at least going to pass the x0 = x1, x0=x2,... hypperplanes to that we're not wasting samples
+    #step 1 is figuring out the chisq of the closest points on those planes
+    nd = mu.shape[0] #number of dimensions of our pdf
+    closest_point_chisq = np.empty(nd-1)
+    for i in range(nd-1):
+    		v = np.zeros(mu) #definition of the hyperplane
+    		v[0] = 1
+    		v[i+1] = 1
+    		a = -np.dot(mu, v)
+    		closest_point_chisq = 0.5 * a**2 / (v[np.newaxis] @ cov @ v[np.newaxis].T)
+    closest_chisq = np.min(closest_point_chisq)
+    
+    print("inside prob_mc.py, closest_chisq is", closest_chisq)
     
     rng = np.random.default_rng(seed=seed)
     
