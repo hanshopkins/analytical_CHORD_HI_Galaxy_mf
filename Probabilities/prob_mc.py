@@ -98,9 +98,10 @@ def montecarlo_probability_only_mislocation_region (R, nsigma_source, nsigma_thr
 	
     samples = rng.multivariate_normal(mu, cov, size=nsamples)
     #now we want to rescale the samples by the square root (back to sigmas) of our random chisq values
-    resc_samples = (samples-mu)/np.sqrt(np.sum(samples**2, axis = 1))*np.sqrt(chisq_draws) + mu
-    confusionCount = np.sum(np.logical_and(np.any(resc_samples > nsigma_threshold, axis=1), np.any(resc_samples[:,0] < resc_samples[:,1:], axis=1)))
-    return confusionCount/nsamples
+    sample_directions = (samples-mu)/(np.sqrt(np.sum(samples**2, axis = 1))[np.newaxis].T)
+    resc_samples = sample_directions*np.sqrt(chisq_draws)[np.newaxis].T + mu #this rescaling is wrong I think. I should rescale based on the eigenvectors.
+    confusionCount = np.sum(np.logical_and(np.any(resc_samples > nsigma_threshold, axis=1), np.any(resc_samples[:,0][np.newaxis].T < resc_samples[:,1:], axis=1)))
+    return probability_past * confusionCount/nsamples
 
 if __name__ == "__main__":
     rvals = np.linspace(0,0.99)
