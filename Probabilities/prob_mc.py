@@ -93,7 +93,6 @@ def montecarlo_probability_only_mislocation_region (R, nsigma_source, nsigma_thr
     
     rng = np.random.default_rng(seed=seed) 
     
-    nsamples=0
     confusionSum=0
     chisq_draws = chisq_dist.isf(np.random.uniform(low=0., high=probability_past, size=nsamples))
 	
