@@ -80,10 +80,10 @@ def montecarlo_probability_only_mislocation_region (R, nsigma_source, nsigma_thr
     nd = mu.shape[0] #number of dimensions of our pdf
     closest_point_chisq = np.empty(nd-1)
     for i in range(nd-1):
-    		v = np.zeros(mu) #definition of the hyperplane
+    		v = np.zeros(nd-1)
     		v[0] = 1
     		v[i+1] = 1
-    		a = -np.dot(mu, v)
+    		a = -np.dot(mu, v) #definition of the hyperplane
     		closest_point_chisq = 0.5 * a**2 / (v[np.newaxis] @ cov @ v[np.newaxis].T)
     closest_chisq = np.min(closest_point_chisq)
     
