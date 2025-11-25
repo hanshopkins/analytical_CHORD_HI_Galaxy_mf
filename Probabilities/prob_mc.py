@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.special import erfc
+import scipy.stats
 import matplotlib.pyplot as plt
 import sys
 sys.path.append("/home/hans/Documents/research/HI_galaxy_search/analytical")
@@ -71,7 +72,7 @@ def montecarlo_probability (R, nsigma_source, nsigma_threshold, max_attempts=10,
         noConfusionProbability = temp_ncp
     return 1-detectSum/nsamples, confusionSum/nsamples
 
-def montecarlo_probability_only_mislocation_region (R, nsigma_source, nsigma_threshold, max_attempts=10, tol=0.001, seed=1234, samples_per_attempt=100000):
+def montecarlo_probability_only_mislocation_region (R, nsigma_source, nsigma_threshold, seed=1234, nsamples=100000):
     mu = R[0] * nsigma_source
     cov = R
     
@@ -87,27 +88,20 @@ def montecarlo_probability_only_mislocation_region (R, nsigma_source, nsigma_thr
     		closest_point_chisq = 0.5 * a**2 / (v[np.newaxis] @ cov @ v[np.newaxis].T)
     closest_chisq = np.min(closest_point_chisq)
     
-    print("inside prob_mc.py, closest_chisq is", closest_chisq)
+    chisq_dist = scipy.stats.chi2(nd)
+    probability_past = chisq_dist.sf(closest_chisq)
     
-    rng = np.random.default_rng(seed=seed)
+    rng = np.random.default_rng(seed=seed) 
     
     nsamples=0
-    detectSum=0
     confusionSum=0
-    noConfusionProbability=-1
-    for i in range(max_attempts):
-        samples = rng.multivariate_normal(mu, cov, size=samples_per_attempt)
-        nsamples += samples_per_attempt
-        detects = np.any(samples>nsigma_threshold,axis=1)
-        detectSum += np.sum(detects)
-        samples_with_detects = samples[np.nonzero(detects)]
-        confusionSum += np.sum(np.any(samples_with_detects[:,1:] > samples_with_detects[:,0][np.newaxis].T,axis=1))
-        temp_ncp = 1-(detectSum+confusionSum)/nsamples
-        if np.abs(noConfusionProbability-temp_ncp) < tol:
-            noConfusionProbability = temp_ncp
-            break
-        noConfusionProbability = temp_ncp
-    return 1-detectSum/nsamples, confusionSum/nsamples
+	chisq_draws = chisq_dist.isf(np.random.uniform(low=0., high=probability_past, size=nsamples))
+	
+	samples = rng.multivariate_normal(mu, cov, size=nsamples)
+	#now we want to rescale the samples by the square root (back to sigmas) of our random chisq values
+	resc_samples = (samples-mu)/np.sqrt(np.sum(samples**2, axis = 1))*np.sqrt(chisq_draws) + mu
+	confusionCount = np.sum(np.logical_and(np.any(resc_samples > nsigma_threshold, axis=1), np.any(resc_samples[:,0] < resc_samples[:,1:], axis=1)))
+    return confusionCount/nsamples
 
 if __name__ == "__main__":
     rvals = np.linspace(0,0.99)
