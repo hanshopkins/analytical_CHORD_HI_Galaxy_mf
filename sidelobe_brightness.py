@@ -425,7 +425,7 @@ def find_four_nearest_in_cc_smoothing (cc_map, us, true_pix, xstrip, ystrip, tol
 	#north alias
 	besti = -1
 	for i in range(peak_positions.shape[0]):
-		if peak_positions[i][0] > true_pix[1] and np.abs(peak_positions[i][1] - true_pix[0]) < xstrip:
+		if peak_positions[i][0] > true_pix[0] and np.abs(peak_positions[i][1] - true_pix[1]) < xstrip:
 			if besti == -1 or peak_positions[besti][0] > peak_positions[i][0]:
 				besti = i
 	if besti == -1:
@@ -435,7 +435,7 @@ def find_four_nearest_in_cc_smoothing (cc_map, us, true_pix, xstrip, ystrip, tol
 	#south alias
 	besti = -1
 	for i in range(peak_positions.shape[0]):
-		if peak_positions[i][0] < true_pix[1] and np.abs(peak_positions[i][1] - true_pix[0]) < xstrip:
+		if peak_positions[i][0] < true_pix[0] and np.abs(peak_positions[i][1] - true_pix[1]) < xstrip:
 			if besti == -1 or peak_positions[besti][0] < peak_positions[i][0]:
 				besti = i
 	if besti == -1:
@@ -445,7 +445,7 @@ def find_four_nearest_in_cc_smoothing (cc_map, us, true_pix, xstrip, ystrip, tol
 	#east alias
 	besti = -1
 	for i in range(peak_positions.shape[0]):
-		if peak_positions[i][1] > true_pix[0] and np.abs(peak_positions[i][0] - true_pix[1]) < ystrip:
+		if peak_positions[i][1] > true_pix[1] and np.abs(peak_positions[i][0] - true_pix[0]) < ystrip:
 			if besti == -1 or peak_positions[besti][1] > peak_positions[i][1]:
 				besti = i
 	if besti == -1:
@@ -455,7 +455,7 @@ def find_four_nearest_in_cc_smoothing (cc_map, us, true_pix, xstrip, ystrip, tol
 	#west alias
 	besti = -1
 	for i in range(peak_positions.shape[0]):
-		if peak_positions[i][1] < true_pix[0] and np.abs(peak_positions[i][0] - true_pix[1]) < ystrip:
+		if peak_positions[i][1] < true_pix[1] and np.abs(peak_positions[i][0] - true_pix[0]) < ystrip:
 			if besti == -1 or peak_positions[besti][1] < peak_positions[i][1]:
 				besti = i
 	if besti == -1:
