@@ -377,14 +377,14 @@ def xcenycen_to_u (us, peak_idx, xcen, ycen): #function useful for fitted_peak_3
 	return ang2vec(pft,pfp)
 
 def peaku_from_peak_cutout (m, us, boundaries):
-	peakval, x, y = fitted_peak_rectangle (m[boundaries[0]:boundaries[1]:1, boundaries[2]:boundaries[3]+1])
-	downi = int(boundaries[1] - y) #pretty sure this is right
+	peakval, x, y = fitted_peak_rectangle (m[boundaries[0]:boundaries[1]+1, boundaries[2]:boundaries[3]+1])
+	downi = int(boundaries[0] + y) #pretty sure this is right
 	leftj = int(boundaries[2] + x)
 	dlt, dlp = vec2ang(us[downi, leftj])
-	urt, urp = vec2ang(us[downi-1, leftj+1])
-	yfrac = (boundaries[1] - y) - downi
+	urt, urp = vec2ang(us[downi+1, leftj+1])
+	yfrac = (boundaries[0] + y) - downi
 	xfrac = (boundaries[2] + x) - leftj
-	pft = dlt - (dlt-urt)*yfrac
+	pft = dlt + (urt-dlt)*yfrac
 	pfp = dlp + (urp-dlp)*xfrac
 	return ang2vec(pft,pfp)
 
