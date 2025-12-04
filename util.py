@@ -1,7 +1,7 @@
 import numpy as np
 
 def ang2vec (theta,phi):
-    return np.array([np.cos(phi)*np.sin(theta),np.sin(phi)*np.sin(theta), np.cos(theta)]).T
+    return np.stack(np.array([np.cos(phi)*np.sin(theta),np.sin(phi)*np.sin(theta), np.cos(theta)]), axis=-1)
 
 def vec2phi (v):
     if v[0] > 0:
@@ -166,7 +166,7 @@ def fitted_peak_3x3 (m,i,j):
 	
 def fitted_peak_rectangle (m):
 	X = np.empty([m.size,6])
-	x, y = np.meshgrid(np.linspace(0, m.shape[0]-1, m.shape[0]), np.linspace(0, m.shape[1]-1, m.shape[1]))
+	x, y = np.meshgrid(np.linspace(0, m.shape[1]-1, m.shape[1]), np.linspace(0, m.shape[0]-1, m.shape[0]))
 	x = x.flatten()
 	y = y.flatten()
 	X[:,0] = x**2
