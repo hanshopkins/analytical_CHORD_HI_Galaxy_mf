@@ -2,6 +2,7 @@ import numpy as np
 import ctypes
 import os
 from numpy.ctypeslib import ndpointer
+from util import vec2ang
 
 amfLib = ctypes.CDLL(os.path.join(os.path.dirname(__file__), "amf.so"))
 cpp_amf = amfLib.analytic_matched_filter
@@ -42,29 +43,6 @@ def amf_su (chord_theta, wavelength, source_theta, source_phi_0, m1, m2, u, delt
         dither_thetas = chord_theta
     
     return cpp_amf_su(dither_thetas, wavelength, source_theta, source_phi_0, m1, m2, u, delta_tau, time_samples, dither_thetas.shape[0])
-
-def vec2ang(v):
-    if v[2] > 0:
-        theta = np.arctan(np.sqrt(v[0]**2 + v[1]**2)/v[2])
-    elif v[2] < 0:
-        theta = np.pi + np.arctan(np.sqrt(v[0]**2 + v[1]**2)/v[2])
-    else:
-        theta = np.pi/2
-    
-    if v[0] > 0:
-        phi = np.arctan(v[1]/v[0])
-    elif v[0] < 0 and v[1] >= 0:
-        phi = np.arctan(v[1]/v[0]) + np.pi
-    elif v[0] < 0 and v[1] < 0:
-        phi = np.arctan(v[1]/v[0]) - np.pi
-    elif v[0] == 0 and v[1] > 0:
-        phi = np.pi/2
-    elif v[0] == 0 and v[1] < 0:
-        phi = -np.pi/2
-    else:
-        phi = 0
-    
-    return theta, phi
 
 def correlation_coefficient (u1, u2, chord_theta, wavelength, m1, m2, delta_tau, time_samples):
     #dealing with dithers
