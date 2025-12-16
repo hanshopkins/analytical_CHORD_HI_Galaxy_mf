@@ -66,6 +66,7 @@ def tan_plane_plot (base_theta, base_phi, chord_theta, nx, ny, extent1, extent2,
     ax.set_xlim([-1, 1])
     ax.set_ylim([-1, 1])
     ax.set_aspect(ny/nx)
+    ax.xaxis.set_inverted(True) #RA axis increases to the left
     if colorbar:
         plt.colorbar()
     
@@ -197,10 +198,10 @@ def tan_plane_plot (base_theta, base_phi, chord_theta, nx, ny, extent1, extent2,
                 
     
 if __name__ == "__main__":
-    nsamples = 1
+    nsamples = 200
     omega = 360.0/(24.0*3600)
     #tan_plane_plot (np.deg2rad(40), -np.deg2rad(10), np.deg2rad(40), 400,400, np.deg2rad(3), np.deg2rad(3), 0.21, np.deg2rad(40)-np.deg2rad(0.8), -np.deg2rad(10), 24, 22, 20/omega/nsamples, nsamples, "", plot_chord="line", plot_source=True, gridlines=True, highlight_aliases=True)
     #tan_plane_plot (np.deg2rad(40), -np.deg2rad(5), np.array([np.deg2rad(40),np.deg2rad(38)]), 400,400, np.deg2rad(3), np.deg2rad(3), 0.21, np.deg2rad(40)-np.deg2rad(0.8), -np.deg2rad(5), 24, 22, 10/omega/nsamples, nsamples, "", plot_chord="line", plot_source=True, gridlines=True, plot_nalias=True, plot_ealias=True)
-    tan_plane_plot (np.deg2rad(45), np.deg2rad(-15), np.deg2rad(45), 600, 600, np.deg2rad(5), np.deg2rad(5), 0.21, np.deg2rad(45), np.deg2rad(-15), 22, 24, 24*3600.0/nsamples, nsamples, "", mode="matched filter", gridlines=True, plot_chord="line")
+    tan_plane_plot (np.deg2rad(45), np.deg2rad(-15), np.deg2rad(45), 300, 300, np.deg2rad(5), np.deg2rad(5), 0.21, np.deg2rad(45), np.deg2rad(-15), 22, 24, 24*3600.0/nsamples, nsamples, "", mode="matched filter", gridlines=True, plot_chord=False)
     plt.show()
     
