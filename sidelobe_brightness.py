@@ -429,9 +429,16 @@ def find_four_nearest_in_cc_smoothing (cc_map, us, true_pix, xstrip, ystrip, tol
 			if besti == -1 or peak_positions[besti][1] > peak_positions[i][1]:
 				besti = i
 	if besti == -1:
-		raise Exception("North alias not found")
-	out_us[0] = peaku_from_peak_cutout (cc_map, us, floodfill_boundaries[besti])
-
+		out_us[0] = np.full(3,np.nan)
+	else:
+		try:
+			out_us[0] = peaku_from_peak_cutout (cc_map, us, floodfill_boundaries[besti])
+		except:
+			#plt.imshow(cc_map[floodfill_boundaries[besti][0]:floodfill_boundaries[besti][1]+1, floodfill_boundaries[besti][2]:floodfill_boundaries[besti][3]+1])
+			#plt.savefig("/tmp/sb_napf.png")
+			#raise Exception("Error fitting north alias peak. Saved fig in /tmp/sb_napf.png")
+			out_us[0] = np.full(3,np.nan)
+ 
 	#south alias
 	besti = -1
 	for i in range(peak_positions.shape[0]):
@@ -439,9 +446,13 @@ def find_four_nearest_in_cc_smoothing (cc_map, us, true_pix, xstrip, ystrip, tol
 			if besti == -1 or peak_positions[besti][1] < peak_positions[i][1]:
 				besti = i
 	if besti == -1:
-		raise Exception("South alias not found")
-	out_us[1] = peaku_from_peak_cutout (cc_map, us, floodfill_boundaries[besti])
-	
+		out_us[1] = np.full(3,np.nan)
+	else:
+		try:
+			out_us[1] = peaku_from_peak_cutout (cc_map, us, floodfill_boundaries[besti])
+		except:
+			out_us[1] = np.full(3,np.nan)
+
 	#east alias
 	besti = -1
 	for i in range(peak_positions.shape[0]):
@@ -449,9 +460,13 @@ def find_four_nearest_in_cc_smoothing (cc_map, us, true_pix, xstrip, ystrip, tol
 			if besti == -1 or peak_positions[besti][0] > peak_positions[i][0]:
 				besti = i
 	if besti == -1:
-		raise Exception("East alias not found")
-	out_us[2] = peaku_from_peak_cutout (cc_map, us, floodfill_boundaries[besti])
-	
+		out_us[2] = np.full(3,np.nan)
+	else:
+		try:
+			out_us[2] = peaku_from_peak_cutout (cc_map, us, floodfill_boundaries[besti])
+		except:
+			out_us[2] = np.full(3,np.nan)
+
 	#west alias
 	besti = -1
 	for i in range(peak_positions.shape[0]):
@@ -459,9 +474,13 @@ def find_four_nearest_in_cc_smoothing (cc_map, us, true_pix, xstrip, ystrip, tol
 			if besti == -1 or peak_positions[besti][0] < peak_positions[i][0]:
 				besti = i
 	if besti == -1:
-		raise Exception("West alias not found")
-	out_us[3] = peaku_from_peak_cutout (cc_map, us, floodfill_boundaries[besti])
-	
+		out_us[3] = np.full(3,np.nan)
+	else:
+		try:
+			out_us[3] = peaku_from_peak_cutout (cc_map, us, floodfill_boundaries[besti])
+		except:
+			out_us[3] = np.full(3,np.nan)
+
 	return out_us
 
 
