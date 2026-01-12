@@ -84,7 +84,7 @@ def tan_plane_plot (base_theta, base_phi, chord_theta, nx, ny, extent1, extent2,
             return tpp_coords_unscaled[1]/np.tan(extent1), tpp_coords_unscaled[0]/np.tan(extent2) #x,y
         
         if plot_chord and plot_chord!="line":
-            if plot_chord is np.ndarray:
+            if chord_theta is np.ndarray:
                 print("error: it looks like you're trying to plot dithers as points. Plot them as lines instead.")
             else:
                 x,y = ang_2_tpp_coords (chord_theta, chord_phi)
