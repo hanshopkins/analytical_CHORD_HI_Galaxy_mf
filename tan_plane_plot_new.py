@@ -85,35 +85,35 @@ class tangent_plane_information:
 		tpp_coords_unscaled = secalpha*(chob[:2] @ tempvec)
 		return tpp_coords_unscaled[1]/np.tan(extent1), tpp_coords_unscaled[0]/np.tan(extent2) #x,y
 
-def const_dec_line_tpp_coords (tpi, theta):
-	#if we haven't already computed min/maxpixelphi, we need to do that now
-	if self.maxpixelphi == None:
-		vecs = tpi.get_pixelvecs() #this will compute the min/max
-		#self.minpixelphi, self.maxpixelphi = find_minmax_phi_from_pixelvecs (vecs, self.base_phi)
-	
-	out_tpp_coords = np.empty([300,2])
-	pixelphidiff = self.maxpixelphi-self.minpixelphi
-	if pixelphidiff > np.pi and angular_difference(self.minpixelphi, self.maxpixelphi) < np.deg2rad(10): #it's basically the whole circle so just plot the whole circle
-		phis = np.linspace(0,2*np.pi, 300)
-	else:
-		phis = np.linspace(self.minpixelphi-pixelphidiff*0.1, self.maxpixelphi+pixelphidiff*0.1, 300)
-	
-	return tpi.ang2tpp_coords(phis,theta)
+	def const_dec_line_tpp_coords (self, theta):
+		#if we haven't already computed min/maxpixelphi, we need to do that now
+		if self.maxpixelphi == None:
+			vecs = tpi.get_pixelvecs() #this will compute the min/max
+			#self.minpixelphi, self.maxpixelphi = find_minmax_phi_from_pixelvecs (vecs, self.base_phi)
+		
+		out_tpp_coords = np.empty([300,2])
+		pixelphidiff = self.maxpixelphi-self.minpixelphi
+		if pixelphidiff > np.pi and angular_difference(self.minpixelphi, self.maxpixelphi) < np.deg2rad(10): #it's basically the whole circle so just plot the whole circle
+			phis = np.linspace(0,2*np.pi, 300)
+		else:
+			phis = np.linspace(self.minpixelphi-pixelphidiff*0.1, self.maxpixelphi+pixelphidiff*0.1, 300)
+		
+		return ang2tpp_coords(phis,theta)
 
-def const_RA_line_tpp_coords (tpi, phi):
-	#if we haven't already computed min/maxpixelphi, we need to do that now
-	if self.maxpixelphi == None:
-		vecs = tpi.get_pixelvecs() #this will compute the min/max
-		#self.minpixelphi, self.maxpixelphi = find_minmax_phi_from_pixelvecs (vecs, self.base_phi)
-	
-	out_tpp_coords = np.empty([300,2])
-	pixelthetadiff = self.maxpixeltheta-self.minpixeltheta
-	if minpixeltheta < np.deg2rad(5): #we're really close to the north pole, so let's just set the min to 0
-		thetas = np.linspace(0, maxpixeltheta, 300)
-	else:
-		thetas = np.linspace(self.minpixeltheta-pixelthetadiff*0.1, self.maxpixeltheta+pixelthetadiff*0.1, 300)
-	
-	return tpi.ang2tpp_coords(phi,thetas)
+	def const_RA_line_tpp_coords (self, phi):
+		#if we haven't already computed min/maxpixelphi, we need to do that now
+		if self.maxpixelphi == None:
+			vecs = tpi.get_pixelvecs() #this will compute the min/max
+			#self.minpixelphi, self.maxpixelphi = find_minmax_phi_from_pixelvecs (vecs, self.base_phi)
+		
+		out_tpp_coords = np.empty([300,2])
+		pixelthetadiff = self.maxpixeltheta-self.minpixeltheta
+		if minpixeltheta < np.deg2rad(5): #we're really close to the north pole, so let's just set the min to 0
+			thetas = np.linspace(0, maxpixeltheta, 300)
+		else:
+			thetas = np.linspace(self.minpixeltheta-pixelthetadiff*0.1, self.maxpixeltheta+pixelthetadiff*0.1, 300)
+		
+		return ang2tpp_coords(phi,thetas)
 
 def tangent_plane_plot (values, tpi, cmap="Greys", vmax=None, logcolor=False, title=None, gridlines=True, plot_chord=False, chord_theta=None, chord_phi=None, plot_source=False, source_phi = None, source_theta = None, colorbar=False):
 	fig = plt.figure()
@@ -156,7 +156,7 @@ def tangent_plane_plot (values, tpi, cmap="Greys", vmax=None, logcolor=False, ti
 		
 		for phi_deg in phi_ticks:
 			phi = np.deg2rad(phi_deg)
-			x,y = const_RA_line_tpp_coords (tpi, phi)
+			x,y = tpi.const_RA_line_tpp_coords (phi)
 			plt.plot(x, y, color="grey", alpha=0.3, label=label)
 			if axis_labels:
 				#we want to find if it crosses the boundary, and if so, write a tick marker
@@ -166,7 +166,7 @@ def tangent_plane_plot (values, tpi, cmap="Greys", vmax=None, logcolor=False, ti
 					x_axis_tick_labels.append("${degvalue:n}$".format(degvalue=np.rad2deg(phi)))
 		for theta_deg in theta_ticks: #plot lines of constant dec
 			theta = np.deg2rad(theta_deg)
-			x,y = const_dec_line_tpp_coords (tpi, theta)
+			x,y = tpi.const_dec_line_tpp_coords (theta)
 			plt.plot(x, y, color=gridlinecolor, alpha=0.3)#linestyle=(0, (3, 10)))
 			if axis_labels:
 				#we want to find if it crosses the boundary, and if so, write a tick marker
@@ -187,11 +187,11 @@ def tangent_plane_plot (values, tpi, cmap="Greys", vmax=None, logcolor=False, ti
 		plt.plot(x, y, 'rx', ms=15, label="CHORD location")
 	elif plot_chord == "line":
 		if isinstance(chord_theta,float):
-			x,y = const_dec_line_tpp_coords (tpi, chord_theta)
+			x,y = tpi.const_dec_line_tpp_coords (chord_theta)
 			plt.plot(x, y, color="red",linestyle=(0, (3, 10)), label="CHORD")
 		elif isinstance(chord_theta,np.ndarray):
 			for i in range(chord_theta.shape[0]):
-				x,y = const_dec_line_tpp_coords (tpi, chord_theta[i])
+				x,y = tpi.const_dec_line_tpp_coords (chord_theta[i])
 				plt.plot(x, y, color="red",linestyle=(0, (3, 10)), label="CHORD")
 	
 	if plot_source == True:
