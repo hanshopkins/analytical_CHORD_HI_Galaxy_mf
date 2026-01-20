@@ -388,15 +388,16 @@ def peaku_from_peak_cutout (m, us, boundaries):
 	pfp = dlp + (urp-dlp)*xfrac
 	return ang2vec(pft,pfp)
 
-def find_four_nearest_in_cc_smoothing (cc_map, us, true_pix, xstrip, ystrip, tol=0.1):
+def find_four_nearest_in_cc_smoothing (cc_map, us, true_pix, xstrip, ystrip, xmindist=0, ymindist=0, tol=0.1, searchby="closest", outputplot=False):
+	#searchby should be "closest" or "highest"
 	#true pix should be floats measured in pixels in order x,y
 	#xstrip and ystrip are also in pix
 	found_map = np.zeros(cc_map.shape, dtype=bool)
 	peak_cc = np.empty(0)
 	peak_flat_idx = np.empty(0,dtype=int)
 	floodfill_boundaries = np.empty([0,4],dtype=int)
-	peak_positions = np.empty([0,2])	
-	
+	peak_positions = np.empty([0,2])
+
 	#making sure the true_pix is the highest peak and blocking it out from the search
 	floodarray = np.zeros(cc_map.shape, dtype=bool)
 	highest_loc = np.unravel_index(np.argmax(cc_map*np.logical_not(found_map)), cc_map.shape)
@@ -421,13 +422,20 @@ def find_four_nearest_in_cc_smoothing (cc_map, us, true_pix, xstrip, ystrip, tol
 		rows_for_bb, cols_for_bb = np.nonzero(floodarray)
 		floodfill_boundaries = np.vstack((floodfill_boundaries, [np.min(rows_for_bb), np.max(rows_for_bb), np.min(cols_for_bb), np.max(cols_for_bb)]))
 
+	if outputplot:
+		fg = plt.figure()
+		plt.imshow(cc_map, origin="upper")
 	out_us = np.empty([4,3])
 	#north alias
 	besti = -1
 	for i in range(peak_positions.shape[0]):
-		if peak_positions[i][1] > true_pix[0] and np.abs(peak_positions[i][0] - true_pix[1]) < xstrip:
-			if besti == -1 or peak_positions[besti][1] > peak_positions[i][1]:
-				besti = i
+		if peak_positions[i][1] > true_pix[0] + ymindist and np.abs(peak_positions[i][0] - true_pix[1]) < xstrip:
+			if searchby == "closest":
+				if besti == -1 or peak_positions[besti][1] > peak_positions[i][1]:
+					besti = i
+			elif searchby == "highest":
+				if besti == -1 or peak_cc[i] > peak_cc[besti]:
+					besti = i
 	if besti == -1:
 		out_us[0] = np.full(3,np.nan)
 	else:
@@ -438,13 +446,20 @@ def find_four_nearest_in_cc_smoothing (cc_map, us, true_pix, xstrip, ystrip, tol
 			#plt.savefig("/tmp/sb_napf.png")
 			#raise Exception("Error fitting north alias peak. Saved fig in /tmp/sb_napf.png")
 			out_us[0] = np.full(3,np.nan)
- 
+	if outputplot:
+		pfi_pixellocation = np.unravel_index(peak_flat_idx[besti], cc_map.shape)
+		plt.plot(pfi_pixellocation[1], pfi_pixellocation[0], 'gx', ms=15)
+
 	#south alias
 	besti = -1
 	for i in range(peak_positions.shape[0]):
-		if peak_positions[i][1] < true_pix[0] and np.abs(peak_positions[i][0] - true_pix[1]) < xstrip:
-			if besti == -1 or peak_positions[besti][1] < peak_positions[i][1]:
-				besti = i
+		if peak_positions[i][1] < true_pix[0] - ymindist and np.abs(peak_positions[i][0] - true_pix[1]) < xstrip:
+			if searchby == "closest":
+				if besti == -1 or peak_positions[besti][1] > peak_positions[i][1]:
+					besti = i
+			elif searchby == "highest":
+				if besti == -1 or peak_cc[i] > peak_cc[besti]:
+					besti = i
 	if besti == -1:
 		out_us[1] = np.full(3,np.nan)
 	else:
@@ -452,13 +467,25 @@ def find_four_nearest_in_cc_smoothing (cc_map, us, true_pix, xstrip, ystrip, tol
 			out_us[1] = peaku_from_peak_cutout (cc_map, us, floodfill_boundaries[besti])
 		except:
 			out_us[1] = np.full(3,np.nan)
+	if outputplot:
+		pfi_pixellocation = np.unravel_index(peak_flat_idx[besti], cc_map.shape)
+		plt.plot(pfi_pixellocation[1], pfi_pixellocation[0], 'gx', ms=15)
 
 	#east alias
 	besti = -1
 	for i in range(peak_positions.shape[0]):
-		if peak_positions[i][0] > true_pix[1] and np.abs(peak_positions[i][1] - true_pix[0]) < ystrip:
-			if besti == -1 or peak_positions[besti][0] > peak_positions[i][0]:
-				besti = i
+		if peak_positions[i][0] > true_pix[1] + xmindist and np.abs(peak_positions[i][1] - true_pix[0]) < ystrip:
+			if outputplot: print("East checking ", i, "vs", besti)
+			if outputplot: print("floodfill boundaries:", (cc_map.shape[0]-floodfill_boundaries[i][0],cc_map.shape[0]-floodfill_boundaries[i][1], floodfill_boundaries[i][2], floodfill_boundaries[i][3]))
+			if searchby == "closest":
+				if besti == -1 or peak_positions[besti][1] > peak_positions[i][1]:
+					besti = i
+			elif searchby == "highest":
+				if besti == -1 or peak_cc[i] > peak_cc[besti]:
+					besti = i
+					if outputplot:
+						pfi_pixellocation = np.unravel_index(peak_flat_idx[besti], cc_map.shape)
+						print("new besti", besti, "found. new best east peak_cc:", peak_cc[besti], "at", (float(cc_map.shape[0]-pfi_pixellocation[0]), float(pfi_pixellocation[1])))
 	if besti == -1:
 		out_us[2] = np.full(3,np.nan)
 	else:
@@ -466,13 +493,20 @@ def find_four_nearest_in_cc_smoothing (cc_map, us, true_pix, xstrip, ystrip, tol
 			out_us[2] = peaku_from_peak_cutout (cc_map, us, floodfill_boundaries[besti])
 		except:
 			out_us[2] = np.full(3,np.nan)
+	if outputplot:
+		pfi_pixellocation = np.unravel_index(peak_flat_idx[besti], cc_map.shape)
+		plt.plot(pfi_pixellocation[1], pfi_pixellocation[0], 'gx', ms=15)
 
 	#west alias
 	besti = -1
 	for i in range(peak_positions.shape[0]):
-		if peak_positions[i][0] < true_pix[1] and np.abs(peak_positions[i][1] - true_pix[0]) < ystrip:
-			if besti == -1 or peak_positions[besti][0] < peak_positions[i][0]:
-				besti = i
+		if peak_positions[i][0] < true_pix[1] - xmindist and np.abs(peak_positions[i][1] - true_pix[0]) < ystrip:
+			if searchby == "closest":
+				if besti == -1 or peak_positions[besti][1] > peak_positions[i][1]:
+					besti = i
+			elif searchby == "highest":
+				if besti == -1 or peak_cc[i] > peak_cc[besti]:
+					besti = i
 	if besti == -1:
 		out_us[3] = np.full(3,np.nan)
 	else:
@@ -480,6 +514,12 @@ def find_four_nearest_in_cc_smoothing (cc_map, us, true_pix, xstrip, ystrip, tol
 			out_us[3] = peaku_from_peak_cutout (cc_map, us, floodfill_boundaries[besti])
 		except:
 			out_us[3] = np.full(3,np.nan)
+	if outputplot:
+		pfi_pixellocation = np.unravel_index(peak_flat_idx[besti], cc_map.shape)
+		plt.plot(pfi_pixellocation[1], pfi_pixellocation[0], 'gx', ms=15)
+
+	if outputplot:
+		plt.savefig("/tmp/ffnics_debugfig.pdf")
 
 	return out_us
 
