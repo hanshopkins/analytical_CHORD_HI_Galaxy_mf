@@ -2,8 +2,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from util import ang2vec, vec2ang
 
-#note not done like at all
-
 def find_minmax_phi_from_pixelvecs (v, basephi):
 	pixelthetas, pixelphis = vec2ang(v)
 	relative_pixelphis = pixelphis - basephi
@@ -115,18 +113,19 @@ class tangent_plane_information:
 		return self.ang_2_tpp_coords(phi,thetas)
 
 def tangent_plane_plot (values, tpi, cmap="Greys", vmax=None, logcolor=False, title=None, gridlines=True, plot_chord=False, chord_theta=None, chord_phi=None,
-		 plot_source=False, source_phi = None, source_theta = None, colorbar=False, axis_labels=False):
-	fig = plt.figure()
-	plt.imshow(values, origin="lower", interpolation = "none", extent = (-1,1,-1,1), cmap=cmap, vmax=vmax)
+		 plot_source=False, source_phi = None, source_theta = None, colorbar=False, axis_labels=False, ax=None):
+	if ax is None:
+		fig = plt.figure()
+		ax = fig.get_axes()[0]
+	ax.imshow(values, origin="lower", interpolation = "none", extent = (-1,1,-1,1), cmap=cmap, vmax=vmax)
 	if logcolor:
 		gridlinecolor="mediumorchid"
 	else:
 		gridlinecolor="grey"
 
 	if title:
-		plt.title(title)
+		plt.suptitle(title)
 
-	ax = fig.get_axes()[0]
 	ax.set_xlim([-1, 1])
 	ax.set_ylim([-1, 1])
 	ax.set_aspect(tpi.ny/tpi.nx)
@@ -136,7 +135,7 @@ def tangent_plane_plot (values, tpi, cmap="Greys", vmax=None, logcolor=False, ti
 		plt.colorbar()
 
 	if not gridlines:
-		plt.tick_params(top=False, bottom=False, left=False, right=False, labelleft=False, labelbottom=False)
+		ax.tick_params(top=False, bottom=False, left=False, right=False, labelleft=False, labelbottom=False)
 	else:
 		deg_thresholds = np.array([5,10,25,50,150],dtype=int)
 		deg_separations = np.array([1,2,5,10,30,60],dtype=int)
@@ -157,7 +156,7 @@ def tangent_plane_plot (values, tpi, cmap="Greys", vmax=None, logcolor=False, ti
 		for phi_deg in phi_ticks:
 			phi = np.deg2rad(phi_deg)
 			x,y = tpi.const_RA_line_tpp_coords (phi)
-			plt.plot(x, y, color="grey", alpha=0.3)
+			ax.plot(x, y, color="grey", alpha=0.3)
 			if axis_labels:
 				#we want to find if it crosses the boundary, and if so, write a tick marker
 				cross = np.searchsorted(y[::-1], -1)
@@ -167,7 +166,7 @@ def tangent_plane_plot (values, tpi, cmap="Greys", vmax=None, logcolor=False, ti
 		for theta_deg in theta_ticks: #plot lines of constant dec
 			theta = np.deg2rad(theta_deg)
 			x,y = tpi.const_dec_line_tpp_coords (theta)
-			plt.plot(x, y, color=gridlinecolor, alpha=0.3)
+			ax.plot(x, y, color=gridlinecolor, alpha=0.3)
 			if axis_labels:
 				#we want to find if it crosses the boundary, and if so, write a tick marker
 				cross = np.searchsorted(x, -1)
@@ -184,16 +183,16 @@ def tangent_plane_plot (values, tpi, cmap="Greys", vmax=None, logcolor=False, ti
 		if not (isinstance(chord_theta,float) and isinstance(chord_phi,float)):
 			raise ValueError("Expecting chord location inputs if plot_chord==True")
 		x,y = tpi.ang_2_tpp_coords (chord_theta, chord_phi)
-		plt.plot(x, y, 'rx', ms=15, label="CHORD location")
+		ax.plot(x, y, 'rx', ms=15, label="CHORD location")
 	elif plot_chord == "line":
 		if isinstance(chord_theta,float):
 			x,y = tpi.const_dec_line_tpp_coords (chord_theta)
-			plt.plot(x, y, color="red",linestyle=(0, (3, 10)), label="CHORD")
+			ax.plot(x, y, color="red",linestyle=(0, (3, 10)), label="CHORD")
 		elif isinstance(chord_theta,np.ndarray):
 			for i in range(chord_theta.shape[0]):
 				x,y = tpi.const_dec_line_tpp_coords (chord_theta[i])
-				plt.plot(x, y, color="red",linestyle=(0, (3, 10)), label="CHORD")
+				ax.plot(x, y, color="red",linestyle=(0, (3, 10)), label="CHORD")
 
 	if plot_source == True:
 		x,y = tpi.ang_2_tpp_coords (source_theta, source_phi)
-		plt.plot(x, y, 'bs', mfc='none', ms=15, label="Source location")
+		ax.plot(x, y, 'bs', mfc='none', ms=15, label="Source location")
