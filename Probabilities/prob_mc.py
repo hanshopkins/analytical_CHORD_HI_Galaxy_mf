@@ -75,7 +75,6 @@ def montecarlo_probability (R, nsigma_source, nsigma_threshold, max_attempts=10,
 def montecarlo_probability_only_mislocation_region (R, nsigma_source, nsigma_threshold, seed=1234, nsamples=100000):
     mu = R[0] * nsigma_source
     cov = R
-    
     #we want to only sample points that are at least going to pass the x0 = x1, x0=x2,... hypperplanes to that we're not wasting samples
     #step 1 is figuring out the chisq of the closest points on those planes
     nd = mu.shape[0] #number of dimensions of our pdf
