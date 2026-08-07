@@ -185,7 +185,7 @@ def tan_plane_plot (base_theta, base_phi, chord_theta, nx, ny, extent1, extent2,
                 ax.set_xticks(x_axis_tick_positions, x_axis_tick_labels)
                 if len(x_axis_tick_positions) > 0: plt.xlabel("RA (Deg)")
                 ax.set_yticks(y_axis_tick_positions, y_axis_tick_labels)
-                if len(y_axis_tick_positions) > 0: plt.ylabel("Dec (Deg)")
+                if len(y_axis_tick_positions) > 0: plt.ylabel("Decl. (Deg)")
                 plt.draw()
             if plot_chord=="line":
                 if isinstance(chord_theta, np.ndarray):
