@@ -5,9 +5,10 @@ from util import ang2vec, vec2ang
 def find_minmax_phi_from_pixelvecs (v, basephi):
 	pixelthetas, pixelphis = vec2ang(v)
 	relative_pixelphis = pixelphis - basephi
-	clamped_relative_pixelphis = relative_pixelphis % 2*np.pi
+	clamped_relative_pixelphis = relative_pixelphis % (2*np.pi)
 	correct_domain_relative_pixelphis = np.where(clamped_relative_pixelphis >= np.pi, clamped_relative_pixelphis-2*np.pi, clamped_relative_pixelphis)
 	maxpixelphi = np.max(correct_domain_relative_pixelphis) + basephi
+	am = np.argmax(correct_domain_relative_pixelphis)
 	minpixelphi = np.min(correct_domain_relative_pixelphis) + basephi
 	return minpixelphi, maxpixelphi
 
@@ -95,7 +96,7 @@ class tangent_plane_information:
 		else:
 			phis = np.linspace(self.minpixelphi-pixelphidiff*0.1, self.maxpixelphi+pixelphidiff*0.1, 300)
 
-		return self.ang_2_tpp_coords(phis,theta)
+		return self.ang_2_tpp_coords(theta,phis)
 
 	def const_RA_line_tpp_coords (self, phi):
 		#if we haven't already computed min/maxpixelphi, we need to do that now
@@ -109,19 +110,15 @@ class tangent_plane_information:
 			thetas = np.linspace(0, maxpixeltheta, 300)
 		else:
 			thetas = np.linspace(self.minpixeltheta-pixelthetadiff*0.1, self.maxpixeltheta+pixelthetadiff*0.1, 300)
+		
+		return self.ang_2_tpp_coords(thetas,phi)
 
-		return self.ang_2_tpp_coords(phi,thetas)
-
-def tangent_plane_plot (values, tpi, cmap="Greys", vmax=None, logcolor=False, title=None, gridlines=True, plot_chord=False, chord_theta=None, chord_phi=None,
-		 plot_source=False, source_phi = None, source_theta = None, colorbar=False, axis_labels=False, ax=None):
+def tangent_plane_plot (values, tpi, cmap="Greys", vmax=None, gridlinecolor="grey", scale="linear", title=None, gridlines=True, plot_chord=False, chord_theta=None, chord_phi=None, chord_colour="red",
+		 chord_linestyle=(0, (3, 10)), plot_source=False, source_phi = None, source_theta = None, source_box_colour="blue", colorbar=False, axis_labels=False, axis_ticks=True, ax=None):
 	if ax is None:
 		fig = plt.figure()
 		ax = fig.get_axes()[0]
-	ax.imshow(values, origin="lower", interpolation = "none", extent = (-1,1,-1,1), cmap=cmap, vmax=vmax)
-	if logcolor:
-		gridlinecolor="mediumorchid"
-	else:
-		gridlinecolor="grey"
+	im = ax.imshow(values, origin="lower", interpolation = "none", extent = (-1,1,-1,1), cmap=cmap, vmax=vmax, norm=scale)
 
 	if title:
 		plt.suptitle(title)
@@ -132,7 +129,7 @@ def tangent_plane_plot (values, tpi, cmap="Greys", vmax=None, logcolor=False, ti
 	ax.xaxis.set_inverted(True) #RA axis increases to the left
 
 	if colorbar:
-		plt.colorbar()
+		plt.gcf().colorbar(im)
 
 	if not gridlines:
 		ax.tick_params(top=False, bottom=False, left=False, right=False, labelleft=False, labelbottom=False)
@@ -145,7 +142,7 @@ def tangent_plane_plot (values, tpi, cmap="Greys", vmax=None, logcolor=False, ti
 		phi_separation = deg_separations[np.searchsorted(deg_thresholds,np.rad2deg(tpi.maxpixelphi-tpi.minpixelphi))]
 		theta_separation = deg_separations[np.searchsorted(deg_thresholds,np.rad2deg(tpi.maxpixeltheta-tpi.minpixeltheta))]
 		phi_ticks = get_integer_ticks(np.rad2deg(tpi.minpixelphi), np.rad2deg(tpi.maxpixelphi), phi_separation)
-		theta_ticks = get_integer_ticks(np.rad2deg(tpi.maxpixeltheta), np.rad2deg(tpi.minpixeltheta), theta_separation)
+		theta_ticks = get_integer_ticks(90-np.rad2deg(tpi.maxpixeltheta), 90-np.rad2deg(tpi.minpixeltheta), theta_separation)
 
 		#holding values for pyplot ticks which we'll add later
 		x_axis_tick_positions = []
@@ -157,42 +154,45 @@ def tangent_plane_plot (values, tpi, cmap="Greys", vmax=None, logcolor=False, ti
 			phi = np.deg2rad(phi_deg)
 			x,y = tpi.const_RA_line_tpp_coords (phi)
 			ax.plot(x, y, color="grey", alpha=0.3)
-			if axis_labels:
+			if axis_ticks:
 				#we want to find if it crosses the boundary, and if so, write a tick marker
 				cross = np.searchsorted(y[::-1], -1)
 				if cross < x.shape[0] and x[::-1][cross] > -1 and x[::-1][cross] < 1:
 					x_axis_tick_positions.append(x[::-1][cross])
 					x_axis_tick_labels.append("${degvalue:n}$".format(degvalue=np.rad2deg(phi)))
 		for theta_deg in theta_ticks: #plot lines of constant dec
-			theta = np.deg2rad(theta_deg)
+			theta = np.deg2rad(90-theta_deg)
 			x,y = tpi.const_dec_line_tpp_coords (theta)
 			ax.plot(x, y, color=gridlinecolor, alpha=0.3)
-			if axis_labels:
+			if axis_ticks:
 				#we want to find if it crosses the boundary, and if so, write a tick marker
 				cross = np.searchsorted(x, -1)
 				if cross < y.shape[0] and y[cross] < 1 and y[cross] > -1:
 					y_axis_tick_positions.append(y[cross])
-					y_axis_tick_labels.append("${degvalue:n}$".format(degvalue=90-theta_deg)) #converting to dec
+					y_axis_tick_labels.append("${degvalue:n}$".format(degvalue=theta_deg)) #converting to dec
 		ax.set_xticks(x_axis_tick_positions, x_axis_tick_labels)
-		if len(x_axis_tick_positions) > 0: plt.xlabel("RA (Deg)")
 		ax.set_yticks(y_axis_tick_positions, y_axis_tick_labels)
-		if len(y_axis_tick_positions) > 0: plt.ylabel("Dec (Deg)")
-		plt.draw()
+	
+	if axis_labels:	
+		plt.xlabel("RA (Deg)")
+		plt.ylabel("Dec (Deg)")
 
 	if plot_chord == True:
-		if not (isinstance(chord_theta,float) and isinstance(chord_phi,float)):
+		if not (isinstance(chord_theta,float) and isinstance(chord_phi,(int, float))):
 			raise ValueError("Expecting chord location inputs if plot_chord==True")
 		x,y = tpi.ang_2_tpp_coords (chord_theta, chord_phi)
-		ax.plot(x, y, 'rx', ms=15, label="CHORD location")
+		ax.plot(x, y, 'x', c=chord_colour, ms=15, label="CHORD location")
 	elif plot_chord == "line":
 		if isinstance(chord_theta,float):
 			x,y = tpi.const_dec_line_tpp_coords (chord_theta)
-			ax.plot(x, y, color="red",linestyle=(0, (3, 10)), label="CHORD")
+			ax.plot(x, y, color=chord_colour,linestyle=chord_linestyle, label="CHORD")
 		elif isinstance(chord_theta,np.ndarray):
 			for i in range(chord_theta.shape[0]):
 				x,y = tpi.const_dec_line_tpp_coords (chord_theta[i])
-				ax.plot(x, y, color="red",linestyle=(0, (3, 10)), label="CHORD")
+				ax.plot(x, y, color=chord_colour,linestyle=chord_linestyle, label="CHORD")
 
 	if plot_source == True:
+		if not (isinstance(source_theta,float) and isinstance(source_phi,(int, float))):
+			raise ValueError("Expecting chord location inputs if plot_chord==True")
 		x,y = tpi.ang_2_tpp_coords (source_theta, source_phi)
-		ax.plot(x, y, 'bs', mfc='none', ms=15, label="Source location")
+		ax.plot(x, y, 's', c=source_box_colour, mfc='none', ms=15, label="Source location")
