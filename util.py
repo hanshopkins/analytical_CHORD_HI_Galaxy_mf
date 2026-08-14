@@ -179,6 +179,9 @@ def fitted_peak_rectangle (m):
 	Z = m.flatten()
 	
 	A = (np.linalg.inv(X.T @ X) @ X.T @ Z.flatten()[np.newaxis].T)[:,0]
-	peaky = (A[4]/A[1] - A[3]/(2*A[0]))/(A[1]/(2*A[0])-2*A[2]/A[1])
+	if A[0] == 0:
+		raise Exception("Divide by 0")
+	#peaky = (A[4]/A[1] - A[3]/(2*A[0]))/(A[1]/(2*A[0])-2*A[2]/A[1]) #this form is sensitive to small A[1], which is very possible
+	peaky = (A[4]-A[1]*A[3]/(2*A[0]))/(A[1]*A[1]/(2*A[0])-2*A[2])
 	peakx = (-A[1]*peaky - A[3])/(2*A[0])
 	return A[0]*peakx**2 + A[1]*peakx*peaky + A[2]*peaky**2 + A[3]*peakx + A[4]*peaky + A[5], peakx, peaky
